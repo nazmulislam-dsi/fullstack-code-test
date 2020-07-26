@@ -10,16 +10,12 @@ import io.vertx.ext.sql.SQLClient;
 
 public class DBConnector {
 
-  private final String DB_PATH = "poller.db";
-  private final SQLClient client;
+  private final String DB_NAME = "POLLER_DB";
+  private final JDBCClient client;
 
   public DBConnector(Vertx vertx){
-    JsonObject config = new JsonObject()
-        .put("url", "jdbc:sqlite:" + DB_PATH)
-        .put("driver_class", "org.sqlite.JDBC")
-        .put("max_pool_size", 30);
-
-    client = JDBCClient.createShared(vertx, config);
+    client = JDBCClient.createShared(vertx, new JsonObject().put("url", "jdbc:hsqldb:mem:test?shutdown=true")
+            .put("driver_class", "org.hsqldb.jdbcDriver").put("max_pool_size", 30));
   }
 
   public Future<ResultSet> query(String query) {

@@ -1,16 +1,13 @@
 plugins {
-  id 'java'
-  id 'application'
-  id 'com.github.johnrengelman.shadow' version '2.0.4'
-}
-ext {
-  vertxVersion = '3.6.3'
-  junitJupiterEngineVersion = '5.2.0'
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '5.0.0'
 }
 
 repositories {
-  mavenLocal()
-  jcenter()
+    mavenCentral()
+    mavenLocal()
+    jcenter()
 }
 
 group = 'se.kry'
@@ -20,44 +17,177 @@ sourceCompatibility = '1.8'
 mainClassName = 'io.vertx.core.Launcher'
 
 def mainVerticleName = 'se.kry.codetest.MainVerticle'
-def watchForChange = 'src/**/*'
-def doOnChange = './gradlew classes'
+def profile = 'local'
+def confPath = 'src/main/resources/' + profile + '.json'
 
-dependencies {
 
-  implementation "io.vertx:vertx-core:$vertxVersion"
-  implementation "io.vertx:vertx-core:$vertxVersion"
-  implementation "io.vertx:vertx-web:$vertxVersion"
-  implementation "io.vertx:vertx-web-client:$vertxVersion"
-  compile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.7.2'
-  compile "io.vertx:vertx-jdbc-client:$vertxVersion"
-
-  testImplementation "io.vertx:vertx-junit5:$vertxVersion"
-  testRuntime("org.junit.jupiter:junit-jupiter-engine:$junitJupiterEngineVersion")
+ext {
+    vertxVersion = '3.6.3'
+    lombokVersion = '1.18.10'
+    junitJupiterEngineVersion = '5.4.0'
+    slf4jVersion = '1.7.30'
+    hsqlVersion = '2.5.1'
+    watchForChange = 'src/**/*'
+    doOnChange = './gradlew classes'
 }
 
-
 shadowJar {
-  classifier = 'fat'
-  manifest {
-    attributes 'Main-Verticle': mainVerticleName
-  }
-  mergeServiceFiles {
-    include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
-  }
+    classifier = 'fat'
+    manifest {
+        attributes 'Main-Verticle': mainVerticleName
+    }
+    mergeServiceFiles {
+        include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
+    }
+}
+
+task chooseProfile(dependsOn: processResources/**/) {
+
+    if (project.hasProperty('local')) {
+        profile = 'local'
+    } else if (project.hasProperty('dev')) {
+        profile = 'dev'
+    }
+    confPath = 'src/main/resources/' + profile + '.json'
+
+    println 'Using config: "' + confPath + '" for ' + project.getName() + ' project'
+    println 'Launching verticle ' + String.valueOf(mainVerticleName)
+    processResources {
+        include "**/**"
+        exclude "**/*_log4j.properties"
+        exclude "**/*.json"
+    }
+
+}
+task copyConf(type: Copy){
+    into "$buildDir/resources/main"
+    from 'src/main/resources'
+    include '**/'+ profile + '.json'
+}
+
+task logConfRename(type: Copy){
+    into "$buildDir/resources/main"
+    from 'src/main/resources'
+    include '**/'+ profile + '_log4j.properties'
+    rename { String fileName ->
+        fileName.replace(profile+"_", "")
+    }
+}
+
+classes {
+    dependsOn chooseProfile
+    dependsOn copyConf
+    dependsOn logConfRename
+}
+
+repositories {
+    jcenter()
+}
+
+/*task annotationProcessing(type: JavaCompile, group: 'build') {
+    source = sourceSets.main.java
+    classpath = configurations.compile + configurations.compileOnly
+    destinationDir = project.file('src/main/generated')
+    options.compilerArgs = [
+            "-proc:only",
+            "-processor", "io.vertx.codegen.CodeGenProcessor",
+            "-Acodegen.output=${destinationDir.absolutePath}"
+    ]
+}*/
+
+task generateFromAnnotation(type: JavaCompile) {
+    group 'build'
+    description 'Generates from Vert.x annotation'
+    source = sourceSets.main.java
+    classpath = configurations.compile + configurations.compileOnly + configurations.annotationProcessor
+    options.annotationProcessorPath = configurations.annotationProcessor
+    options.compilerArgs = [
+            "-proc:only",
+            "-processor", "io.vertx.codegen.CodeGenProcessor",
+            "-Acodegen.output=${projectDir}/src/main"
+    ]
+    destinationDir = file("${projectDir}/src/main/generated")
+}
+
+compileJava{
+    targetCompatibility = "$sourceCompatibility"
+    sourceCompatibility = "$sourceCompatibility"
+
+    dependsOn generateFromAnnotation
+    source += 'src/main/generated'
+    options.compilerArgs += '-proc:none'
+}
+
+clean {
+    delete += 'src/main/generated'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs += 'src/main/generated'
+        }
+    }
+}
+
+dependencies {
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    compileOnly "io.vertx:vertx-codegen:$vertxVersion"
+    annotationProcessor "io.vertx:vertx-codegen:$vertxVersion:processor"
+    compileOnly "io.vertx:vertx-service-proxy:$vertxVersion"
+    annotationProcessor "io.vertx:vertx-service-proxy:$vertxVersion:processor"
+
+    compile("io.vertx:vertx-core:${vertxVersion}")
+    compile("io.vertx:vertx-web:${vertxVersion}")
+    compile "io.vertx:vertx-config:$vertxVersion"
+    compile "io.vertx:vertx-web-client:$vertxVersion"
+    compile("io.vertx:vertx-codegen:${vertxVersion}")
+    compile "io.vertx:vertx-service-proxy:$vertxVersion"
+    compile "io.vertx:vertx-circuit-breaker:$vertxVersion"
+    compile "io.vertx:vertx-junit5:$vertxVersion"
+    testCompile("io.vertx:vertx-unit:${vertxVersion}")
+
+    compile "io.vertx:vertx-jdbc-client:$vertxVersion"
+    compile "org.hsqldb:hsqldb:$hsqlVersion"
+
+    compile "org.slf4j:slf4j-api:$slf4jVersion"
+    compile "org.slf4j:slf4j-log4j12:$slf4jVersion"
+
+    compile 'com.h2database:h2:1.4.200'
+
+    testImplementation "io.vertx:vertx-junit5:$vertxVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterEngineVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterEngineVersion"
+
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += ['-Xlint:deprecation']
 }
 
 test {
-  useJUnitPlatform()
-  testLogging {
-    events 'PASSED', 'FAILED', 'SKIPPED'
-  }
+    useJUnitPlatform()
+    testLogging {
+        events 'PASSED', 'FAILED', 'SKIPPED'
+    }
 }
 
 run {
-  args = ['run', mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=$mainClassName", "--on-redeploy=$doOnChange"]
+    args = [
+            'run', mainVerticleName,
+            '-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory',
+            "-conf", confPath,
+            "--redeploy=$project.ext.watchForChange",
+            "--launcher-class=$mainClassName",
+            "--on-redeploy=$project.ext.doOnChange",
+            profile.equals('local') ? "--java-opts" : "", profile.equals('local') ?
+                    "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000" : ""
+    ]
 }
 
+/*
 task wrapper(type: Wrapper) {
-  gradleVersion = '4.6'
+    gradleVersion = '5.0'
 }
+*/
