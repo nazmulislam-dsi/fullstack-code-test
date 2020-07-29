@@ -4,3 +4,4 @@ out/
 .gradle/
 gradle
 .vertx
+webroot/swagger-ui/*.yaml

@@ -1,24 +1,33 @@
 package se.kry.codetest.model;
 
 import io.vertx.codegen.annotations.DataObject;
+import io.vertx.codegen.annotations.Fluent;
 import io.vertx.core.json.JsonObject;
+import lombok.*;
+import lombok.experimental.Accessors;
 
 @DataObject(generateConverter = true)
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode
+@Data
 public
-class Poller {
+class Poller {;
+    @Accessors(chain = true)
+    @Setter(onMethod = @__({@Fluent}))
     private long id;
+    @Accessors(chain = true)
+    @Setter(onMethod = @__({@Fluent}))
     private String name;
+    @Accessors(chain = true)
+    @Setter(onMethod = @__({@Fluent}))
     private String url;
+    @Accessors(chain = true)
+    @Setter(onMethod = @__({@Fluent}))
     private String status;
+    @Accessors(chain = true)
+    @Setter(onMethod = @__({@Fluent}))
     private String userId;
-
-    public Poller(long id, String name, String url, String status, String userId) {
-        this.id = id;
-        this.name = name;
-        this.url = url;
-        this.status = status;
-        this.userId = userId;
-    }
 
     public Poller(JsonObject obj) {
         PollerConverter.fromJson(obj, this);
@@ -34,43 +43,4 @@ class Poller {
         return json;
     }
 
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
 }

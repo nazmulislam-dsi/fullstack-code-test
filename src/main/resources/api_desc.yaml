@@ -1,0 +1,349 @@
+openapi: 3.0.1
+info:
+  title: 'Poller Manager API'
+  contact:
+    name: 'Nazmul Islam'
+    url: 'https://www.linkedin.com/in/nazmul-islam-7aaa5173/'
+  license:
+    name: 'MIT License'
+    url: 'https://opensource.org/licenses/MIT'
+  version: 1.0.0
+paths:
+  /api/v1/pollers:
+    summary: 'Path used to manage the list of poller.'
+    description: "The REST endpoint/path used to list and create zero or more `Poller`\nentities.  This path contains a `GET` and `DELETE` operation to perform the list\nand create tasks, respectively."
+    get:
+      summary: 'List All Poller'
+      description: "Gets a list of all `Poller` entities where logged user is involved"
+      operationId: getPollerList
+      tags:
+        - pollers
+      parameters:
+        - name: pollerId
+          in: query
+          description: 'Provide poller ID for filter'
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: userId
+          in: query
+          description: 'Provide user ID for filter'
+          required: false
+          schema:
+            type: string
+        - name: pollerName
+          in: query
+          description: 'Provide poller name for filter'
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Successful response - returns an array of `Poller` entities.'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pollers'
+        '204':
+          description: 'No poller found.'
+        default:
+          description: 'Internal server error.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - loggedUserToken: []
+      x-vertx-event-bus: poller.service_manager
+    delete:
+      summary: 'Delete pollers'
+      description: 'Deletes all existing `Poller`.'
+      operationId: deleteAllPoller
+      tags:
+        - pollers
+      responses:
+        '204':
+          description: 'Successfully deleted all poller.'
+        '401':
+          description: 'Operation is not permitted.'
+        '500':
+          description: 'Could not perform operation. Internal server error.'
+        default:
+          description: 'Internal server error.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - loggedUserToken: []
+      x-vertx-event-bus: poller.service_manager
+  '/api/v1/pollers/{userId}':
+    summary: 'Path used to manage pollers belongs to a user.'
+    description: "The REST endpoint/path used to get, create, and delete single instances\nof `Poller` for a user.  This path contains `GET`, `POST`, and `DELETE` operations\nused to perform the get, create, and delete tasks, respectively."
+    get:
+      summary: 'Get Poller list with User ID'
+      description: 'Gets the list of a `Poller` with User ID.'
+      operationId: getPollerListByUser
+      tags:
+        - pollers
+      parameters:
+        - name: pollerId
+          in: query
+          description: 'Provide poller ID for filter'
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: pollerName
+          in: query
+          description: 'Provide poller name for filter'
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Successful response - returns a single `Poller`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pollers'
+        '204':
+          description: 'No poller found.'
+        '401':
+          description: 'Expired Token '
+        default:
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - loggedUserToken: []
+      x-vertx-event-bus: poller.service_manager
+    post:
+      summary: 'Create a Poller with with User ID'
+      description: 'Creates a new instance of a `Poller` with User ID.'
+      operationId: createPoller
+      tags:
+        - pollers
+      requestBody:
+        description: 'A new `Poller` to be created.'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollerPostDTO'
+        required: true
+      responses:
+        '201':
+          description: 'Successful created a poller.'
+        '400':
+          description: "Invalid URL io poller"
+        '401':
+          description: 'Expired Token '
+        default:
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - loggedUserToken: []
+      x-vertx-event-bus: poller.service_manager
+    delete:
+      summary: 'Delete pollers'
+      description: 'Deletes all existing `Poller` for the user.'
+      operationId: deleteAllPollerByUser
+      tags:
+        - pollers
+      responses:
+        '204':
+          description: 'Successfully deleted all poller  with User ID.'
+        '401':
+          description: 'Operation is not permitted.'
+        default:
+          description: 'Internal server error.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - loggedUserToken: []
+      x-vertx-event-bus: poller.service_manager
+    parameters:
+      - name: userId
+        in: path
+        description: 'A unique identifier for user.'
+        required: true
+        schema:
+          type: string
+  /api/v1/pollers/{userId}/{pollerId}:
+    summary: 'Path used to manage pollers belongs to a user.'
+    description: "The REST endpoint/path used to update single instances\nof `Poller` for a user.  This path contains `PUT` operations\nused to perform the update tasks, respectively."
+    put:
+      summary: 'Update a Poller'
+      description: 'Updates an existing `Poller` with User ID.'
+      operationId: updatePoller
+      tags:
+        - pollers
+      requestBody:
+        description: 'Updated a `Poller` information with User ID.'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollerPutDTO'
+        required: true
+      responses:
+        '202':
+          description: 'Successfully update a poller.'
+        '401':
+          description: 'Expired Token '
+        '500':
+          description: 'Could not perform operation. Internal server error.'
+        default:
+          description: 'Internal server error.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - loggedUserToken: []
+      x-vertx-event-bus: poller.service_manager
+    parameters:
+      - name: userId
+        in: path
+        description: 'A unique identifier for user.'
+        required: true
+        schema:
+          type: string
+      - name: pollerId
+        in: path
+        description: 'A unique identifier for poller.'
+        required: true
+        schema:
+          type: string
+  /api/v1/login:
+    post:
+      summary: Login
+      operationId: login
+      tags:
+        - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+                - password
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  $ref: '#/components/schemas/Password'
+        required: true
+      responses:
+        '200':
+          description: 'Returns the JWT token'
+          content:
+            text/plain: {}
+        '400':
+          description: 'Wrong username or password'
+          content:
+            text/plain: {}
+      x-vertx-event-bus: user.service_manager
+  /api/v1/register:
+    post:
+      summary: Register
+      operationId: register
+      tags:
+        - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+                - password
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  $ref: '#/components/schemas/Password'
+        required: true
+      responses:
+        '200':
+          description: 'Returns the JWT Token'
+          content:
+            text/plain:
+              x-description: 'Login token'
+        '400':
+          description: 'Username already exists'
+          content:
+            text/plain: {}
+      x-vertx-event-bus: user.service_manager
+components:
+  schemas:
+    Poller:
+      type: object
+      required:
+        - id
+        - name
+        - url
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        url:
+          type: string
+        status:
+          type: string
+        userId:
+          type: string
+    Pollers:
+      type: array
+      items:
+        $ref: "#/components/schemas/Poller"
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    PollerPostDTO:
+      type: object
+      required:
+        - name
+        - url
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+    PollerPutDTO:
+      type: object
+      required:
+        - url
+      properties:
+        name:
+          type: string
+    Password:
+      minLength: 6
+      type: string
+  securitySchemes:
+    loggedUserToken:
+      type: http
+      scheme: bearer
+  x-vertx-service-gen:
+    poller.service_manager: PollerService
+    user.service_manager: UserService

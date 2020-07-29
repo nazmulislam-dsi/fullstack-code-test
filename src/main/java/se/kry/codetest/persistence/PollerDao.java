@@ -20,8 +20,8 @@ public interface PollerDao {
   Future<Boolean> deleteAllPollerByUserId(String userId);
   Future<Boolean> deleteAllPoller();
 
-  static PollerDao create(SQLConnection conn) {
-    return new PollerDaoImpl(conn);
+  static PollerDao create(JDBCClient jdbcClient) {
+    return new PollerDaoImpl(jdbcClient);
   }
 
 }

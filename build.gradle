@@ -1,7 +1,8 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '5.0.0'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'io.dotinc.vertx-codegen-plugin' version '0.1.1'
 }
 
 repositories {
@@ -18,11 +19,11 @@ mainClassName = 'io.vertx.core.Launcher'
 
 def mainVerticleName = 'se.kry.codetest.MainVerticle'
 def profile = 'local'
-def confPath = 'src/main/resources/' + profile + '.json'
+def confPath = "$buildDir/conf/" + profile + '_config.json'
 
 
 ext {
-    vertxVersion = '3.6.3'
+    vertxVersion = '3.9.0'
     lombokVersion = '1.18.10'
     junitJupiterEngineVersion = '5.4.0'
     slf4jVersion = '1.7.30'
@@ -48,7 +49,7 @@ task chooseProfile(dependsOn: processResources/**/) {
     } else if (project.hasProperty('dev')) {
         profile = 'dev'
     }
-    confPath = 'src/main/resources/' + profile + '.json'
+    confPath = "$buildDir/resources/main/conf/config.json"
 
     println 'Using config: "' + confPath + '" for ' + project.getName() + ' project'
     println 'Launching verticle ' + String.valueOf(mainVerticleName)
@@ -60,9 +61,21 @@ task chooseProfile(dependsOn: processResources/**/) {
 
 }
 task copyConf(type: Copy){
+    into "$buildDir/resources/main/conf"
+    from "$projectDir/conf"
+    include '**/'+ profile + '_config.json'
+    rename {
+        "config.json"
+    }
+}
+
+task copyJWKPem(type: Copy){
     into "$buildDir/resources/main"
     from 'src/main/resources'
-    include '**/'+ profile + '.json'
+    include '**/'+ profile + '_jwk.json'
+    rename {
+        "jwk.json"
+    }
 }
 
 task logConfRename(type: Copy){
@@ -74,48 +87,38 @@ task logConfRename(type: Copy){
     }
 }
 
+task swaggerFileReplace(type: Copy){
+    into "$projectDir/webroot/swagger-ui"
+    from 'src/main/resources'
+    include '**/api_desc.yaml'
+}
+
 classes {
     dependsOn chooseProfile
+    dependsOn copyJWKPem
     dependsOn copyConf
     dependsOn logConfRename
+    dependsOn swaggerFileReplace
 }
 
 repositories {
     jcenter()
 }
 
-/*task annotationProcessing(type: JavaCompile, group: 'build') {
-    source = sourceSets.main.java
-    classpath = configurations.compile + configurations.compileOnly
-    destinationDir = project.file('src/main/generated')
-    options.compilerArgs = [
-            "-proc:only",
-            "-processor", "io.vertx.codegen.CodeGenProcessor",
-            "-Acodegen.output=${destinationDir.absolutePath}"
-    ]
-}*/
-
-task generateFromAnnotation(type: JavaCompile) {
-    group 'build'
-    description 'Generates from Vert.x annotation'
-    source = sourceSets.main.java
-    classpath = configurations.compile + configurations.compileOnly + configurations.annotationProcessor
-    options.annotationProcessorPath = configurations.annotationProcessor
-    options.compilerArgs = [
-            "-proc:only",
-            "-processor", "io.vertx.codegen.CodeGenProcessor",
-            "-Acodegen.output=${projectDir}/src/main"
-    ]
-    destinationDir = file("${projectDir}/src/main/generated")
+codeGen {
+    vertxVersion = '3.9.0'
+    generatedDirs = "src/main/generated"
+    generationPath = "proxy"
 }
+
+
 
 compileJava{
     targetCompatibility = "$sourceCompatibility"
     sourceCompatibility = "$sourceCompatibility"
 
-    dependsOn generateFromAnnotation
     source += 'src/main/generated'
-    options.compilerArgs += '-proc:none'
+    //options.compilerArgs += '-proc:none'
 }
 
 clean {
@@ -137,6 +140,8 @@ dependencies {
     annotationProcessor "io.vertx:vertx-codegen:$vertxVersion:processor"
     compileOnly "io.vertx:vertx-service-proxy:$vertxVersion"
     annotationProcessor "io.vertx:vertx-service-proxy:$vertxVersion:processor"
+    compileOnly "io.vertx:vertx-web-api-service:$vertxVersion"
+    annotationProcessor "io.vertx:vertx-web-api-service:$vertxVersion"
 
     compile("io.vertx:vertx-core:${vertxVersion}")
     compile("io.vertx:vertx-web:${vertxVersion}")
@@ -145,14 +150,21 @@ dependencies {
     compile("io.vertx:vertx-codegen:${vertxVersion}")
     compile "io.vertx:vertx-service-proxy:$vertxVersion"
     compile "io.vertx:vertx-circuit-breaker:$vertxVersion"
+    compile "io.vertx:vertx-web-api-service:$vertxVersion"
+    //compile "io.vertx:vertx-web-validation:$vertxVersion"
+    compile "io.vertx:vertx-auth-jwt:$vertxVersion"
     compile "io.vertx:vertx-junit5:$vertxVersion"
+    
     testCompile("io.vertx:vertx-unit:${vertxVersion}")
+    testCompileOnly "org.projectlombok:$lombokVersion"
 
     compile "io.vertx:vertx-jdbc-client:$vertxVersion"
-    compile "org.hsqldb:hsqldb:$hsqlVersion"
+    //compile "org.hsqldb:hsqldb:$hsqlVersion"
 
     compile "org.slf4j:slf4j-api:$slf4jVersion"
     compile "org.slf4j:slf4j-log4j12:$slf4jVersion"
+
+    compile "org.projectlombok:lombok:$lombokVersion"
 
     compile 'com.h2database:h2:1.4.200'
 

@@ -1,7 +1,0 @@
-{
-  "http.port":8080,
-  "datasource.url": "jdbc:h2:mem:test",
-  "datasource.driver.class.name": "org.hsqldb.jdbcDriver",
-  "datasource.driver.username": "sa",
-  "datasource.driver.password": ""
-}
