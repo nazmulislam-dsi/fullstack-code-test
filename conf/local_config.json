@@ -1,7 +1,8 @@
 {
   "http.port":8080,
-  "datasource.url": "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1",
+  "datasource.url": "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;",
   "datasource.driver.class.name": "org.h2.Driver",
   "datasource.driver.username": "sa",
-  "datasource.driver.password": ""
+  "datasource.driver.password": "",
+  "jwk.path": "jwk.json"
 }

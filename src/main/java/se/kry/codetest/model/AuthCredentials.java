@@ -26,6 +26,10 @@ public class AuthCredentials {
     AuthCredentialsConverter.fromJson(json, this);
   }
 
+  public AuthCredentials(String jsonStr) {
+    AuthCredentialsConverter.fromJson(new JsonObject(jsonStr), this);
+  }
+
   public JsonObject toJson() {
     JsonObject json = new JsonObject();
     AuthCredentialsConverter.toJson(this, json);

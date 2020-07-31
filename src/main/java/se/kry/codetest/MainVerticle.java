@@ -11,10 +11,8 @@ import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.jdbc.JDBCClient;
-import io.vertx.ext.jwt.JWTOptions;
 import io.vertx.ext.sql.SQLConnection;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.api.contract.RouterFactoryOptions;
 import io.vertx.ext.web.api.contract.openapi3.OpenAPI3RouterFactory;
 import io.vertx.ext.web.api.validation.ValidationException;
 import io.vertx.ext.web.handler.JWTAuthHandler;
@@ -23,9 +21,9 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.serviceproxy.ServiceBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.kry.codetest.persistence.PollerDao;
+import se.kry.codetest.persistence.ServicePollerDao;
 import se.kry.codetest.persistence.UserDao;
-import se.kry.codetest.service.PollerService;
+import se.kry.codetest.service.ServicePollerService;
 import se.kry.codetest.service.UserService;
 
 import java.nio.charset.Charset;
@@ -65,7 +63,7 @@ public class MainVerticle extends AbstractVerticle {
             else {
                 LOG.info("NILOG::http.port from property :: " + config().getInteger("http.port", 8080));
 
-                String dbUrl = config().getString("datasource.url", "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1");
+                String dbUrl = config().getString("datasource.url", "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;");
                 String driverClassName = config().getString("datasource.driver.class.name", "org.h2.Driver");
                 String username = config().getString("datasource.driver.username", "sa");
                 String password = config().getString("datasource.driver.password", "");
@@ -81,15 +79,15 @@ public class MainVerticle extends AbstractVerticle {
                                 .put("driver_class", driverClassName).put("max_pool_size", 30), "dataSource");
                 if(setupDbSchema){
                     setUpDDL(jdbcClient, result -> {
-                        LOG.error("NILOG::setUpDDL done.");
+                        LOG.info("NILOG::setUpDDL done.");
                     });
                 }
                 JsonObject jwkObject = jwk.result().toJsonObject();
                 PubSecKeyOptions pubSecKeyOptions = new PubSecKeyOptions(jwkObject);
                 JWTAuth auth = JWTAuth.create(vertx, new JWTAuthOptions().addPubSecKey(pubSecKeyOptions));
-                PollerDao pollerDao = PollerDao.create(jdbcClient);
+                ServicePollerDao servicePollerDao = ServicePollerDao.create(jdbcClient);
                 UserDao userDao  = UserDao.create(jdbcClient);
-                startServices(pollerDao,userDao,auth);
+                startServices(servicePollerDao,userDao,auth);
                 startHttpServer(auth).onComplete(promise);
             }
         });
@@ -135,7 +133,6 @@ public class MainVerticle extends AbstractVerticle {
                 router.errorHandler(400,routingContext -> {
                     Throwable failure = routingContext.failure();
                     if (failure instanceof ValidationException)
-
                         routingContext
                                 .response()
                                 .setStatusCode(400)
@@ -169,7 +166,7 @@ public class MainVerticle extends AbstractVerticle {
                 if (readFile.failed()) {
                     LOG.error("NILOG::Could not fine schema file, exiting!!");
                     this.getVertx().close();
-                    throw new RuntimeException();
+                    throw new RuntimeException(readFile.cause());
                 }
                 String schema = readFile.result().toString(Charset.forName("utf-8"));
                 LOG.info("SCHEMA::\n" + schema);
@@ -190,16 +187,16 @@ public class MainVerticle extends AbstractVerticle {
         });
     }
 
-    private void startServices(PollerDao pollerDao, UserDao userDao, JWTAuth auth) {
+    private void startServices(ServicePollerDao servicePollerDao, UserDao userDao, JWTAuth auth) {
         serviceBinder = new ServiceBinder(vertx);
 
         registeredConsumers = new ArrayList<>();
 
-        PollerService pollerService = PollerService.create(pollerDao, auth);
+        ServicePollerService servicePollerService = ServicePollerService.create(servicePollerDao, auth);
         registeredConsumers.add(
                 serviceBinder
                         .setAddress("poller.service_manager")
-                        .register(PollerService.class, pollerService)
+                        .register(ServicePollerService.class, servicePollerService)
         );
 
         UserService userService = UserService.create(userDao, auth);

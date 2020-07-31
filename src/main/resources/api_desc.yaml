@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  title: 'Poller Manager API'
+  title: 'Manager API for a Service Poller'
   contact:
     name: 'Nazmul Islam'
     url: 'https://www.linkedin.com/in/nazmul-islam-7aaa5173/'
@@ -9,86 +9,15 @@ info:
     url: 'https://opensource.org/licenses/MIT'
   version: 1.0.0
 paths:
-  /api/v1/pollers:
-    summary: 'Path used to manage the list of poller.'
-    description: "The REST endpoint/path used to list and create zero or more `Poller`\nentities.  This path contains a `GET` and `DELETE` operation to perform the list\nand create tasks, respectively."
+  /api/v1/services:
+    summary: 'Path used to manage services belongs to a user.'
+    description: "The REST endpoint/path used to get, create, and delete single instances\nof `Service` for a user.  This path contains `GET`, `POST`, and `DELETE` operations\nused to perform the get, create, and delete tasks, respectively."
     get:
-      summary: 'List All Poller'
-      description: "Gets a list of all `Poller` entities where logged user is involved"
-      operationId: getPollerList
+      summary: 'Get Service list with User JWT Token.'
+      description: 'Gets the list of a `Service` with User JWT Token.'
+      operationId: getServiceList
       tags:
-        - pollers
-      parameters:
-        - name: pollerId
-          in: query
-          description: 'Provide poller ID for filter'
-          required: false
-          schema:
-            type: integer
-            format: int32
-        - name: userId
-          in: query
-          description: 'Provide user ID for filter'
-          required: false
-          schema:
-            type: string
-        - name: pollerName
-          in: query
-          description: 'Provide poller name for filter'
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: 'Successful response - returns an array of `Poller` entities.'
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Pollers'
-        '204':
-          description: 'No poller found.'
-        default:
-          description: 'Internal server error.'
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      security:
-        - loggedUserToken: []
-      x-vertx-event-bus: poller.service_manager
-    delete:
-      summary: 'Delete pollers'
-      description: 'Deletes all existing `Poller`.'
-      operationId: deleteAllPoller
-      tags:
-        - pollers
-      responses:
-        '204':
-          description: 'Successfully deleted all poller.'
-        '401':
-          description: 'Operation is not permitted.'
-        '500':
-          description: 'Could not perform operation. Internal server error.'
-        default:
-          description: 'Internal server error.'
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      security:
-        - loggedUserToken: []
-      x-vertx-event-bus: poller.service_manager
-  '/api/v1/pollers/{userId}':
-    summary: 'Path used to manage pollers belongs to a user.'
-    description: "The REST endpoint/path used to get, create, and delete single instances\nof `Poller` for a user.  This path contains `GET`, `POST`, and `DELETE` operations\nused to perform the get, create, and delete tasks, respectively."
-    get:
-      summary: 'Get Poller list with User ID'
-      description: 'Gets the list of a `Poller` with User ID.'
-      operationId: getPollerListByUser
-      tags:
-        - pollers
+        - services
       parameters:
         - name: pollerId
           in: query
@@ -105,17 +34,17 @@ paths:
             type: string
       responses:
         '200':
-          description: 'Successful response - returns a single `Poller`.'
+          description: 'Successful response - returns a single `Service`.'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Pollers'
+                $ref: '#/components/schemas/Services'
         '204':
           description: 'No poller found.'
         '401':
           description: 'Expired Token '
         default:
-          description: Internal server error.
+          description: "Internal server error."
           content:
             application/json:
               schema:
@@ -124,21 +53,21 @@ paths:
         - loggedUserToken: []
       x-vertx-event-bus: poller.service_manager
     post:
-      summary: 'Create a Poller with with User ID'
-      description: 'Creates a new instance of a `Poller` with User ID.'
-      operationId: createPoller
+      summary: 'Create a Service with with User JWT Token.'
+      description: 'Creates a new instance of a `Service` with User JWT Token.'
+      operationId: createService
       tags:
-        - pollers
+        - services
       requestBody:
-        description: 'A new `Poller` to be created.'
+        description: 'A new `Service` to be created.'
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PollerPostDTO'
+              $ref: '#/components/schemas/ServicePostDTO'
         required: true
       responses:
         '201':
-          description: 'Successful created a poller.'
+          description: 'Successful created the poller.'
         '400':
           description: "Invalid URL io poller"
         '401':
@@ -153,14 +82,14 @@ paths:
         - loggedUserToken: []
       x-vertx-event-bus: poller.service_manager
     delete:
-      summary: 'Delete pollers'
-      description: 'Deletes all existing `Poller` for the user.'
-      operationId: deleteAllPollerByUser
+      summary: 'Delete services'
+      description: 'Deletes all existing `Service` for the user.'
+      operationId: deleteAllService
       tags:
-        - pollers
+        - services
       responses:
         '204':
-          description: 'Successfully deleted all poller  with User ID.'
+          description: 'Successfully deleted all poller  with User JWT Token.'
         '401':
           description: 'Operation is not permitted.'
         default:
@@ -172,32 +101,25 @@ paths:
       security:
         - loggedUserToken: []
       x-vertx-event-bus: poller.service_manager
-    parameters:
-      - name: userId
-        in: path
-        description: 'A unique identifier for user.'
-        required: true
-        schema:
-          type: string
-  /api/v1/pollers/{userId}/{pollerId}:
-    summary: 'Path used to manage pollers belongs to a user.'
-    description: "The REST endpoint/path used to update single instances\nof `Poller` for a user.  This path contains `PUT` operations\nused to perform the update tasks, respectively."
+  /api/v1/services/{serviceId}:
+    summary: 'Path used to manage services belongs to a user.'
+    description: "The REST endpoint/path used to update single instances\nof `Service` for a user.  This path contains `PUT` operations\nused to perform the update tasks, respectively."
     put:
-      summary: 'Update a Poller'
-      description: 'Updates an existing `Poller` with User ID.'
-      operationId: updatePoller
+      summary: 'Update a Service'
+      description: 'Updates an existing `Service` with User JWT Token.'
+      operationId: updateService
       tags:
-        - pollers
+        - services
       requestBody:
-        description: 'Updated a `Poller` information with User ID.'
+        description: 'Updated a `Service` information with User JWT Token.'
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PollerPutDTO'
+              $ref: '#/components/schemas/ServicePutDTO'
         required: true
       responses:
         '202':
-          description: 'Successfully update a poller.'
+          description: 'Successfully update a service.'
         '401':
           description: 'Expired Token '
         '500':
@@ -212,15 +134,9 @@ paths:
         - loggedUserToken: []
       x-vertx-event-bus: poller.service_manager
     parameters:
-      - name: userId
+      - name: serviceId
         in: path
-        description: 'A unique identifier for user.'
-        required: true
-        schema:
-          type: string
-      - name: pollerId
-        in: path
-        description: 'A unique identifier for poller.'
+        description: 'A unique identifier for service.'
         required: true
         schema:
           type: string
@@ -287,7 +203,7 @@ paths:
       x-vertx-event-bus: user.service_manager
 components:
   schemas:
-    Poller:
+    Service:
       type: object
       required:
         - id
@@ -303,12 +219,10 @@ components:
           type: string
         status:
           type: string
-        userId:
-          type: string
-    Pollers:
+    Services:
       type: array
       items:
-        $ref: "#/components/schemas/Poller"
+        $ref: "#/components/schemas/Service"
     Error:
       type: object
       required:
@@ -320,7 +234,7 @@ components:
           format: int32
         message:
           type: string
-    PollerPostDTO:
+    ServicePostDTO:
       type: object
       required:
         - name
@@ -330,10 +244,10 @@ components:
           type: string
         url:
           type: string
-    PollerPutDTO:
+    ServicePutDTO:
       type: object
       required:
-        - url
+        - name
       properties:
         name:
           type: string

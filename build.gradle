@@ -18,7 +18,7 @@ sourceCompatibility = '1.8'
 mainClassName = 'io.vertx.core.Launcher'
 
 def mainVerticleName = 'se.kry.codetest.MainVerticle'
-def profile = 'local'
+def profile = 'test'
 def confPath = "$buildDir/conf/" + profile + '_config.json'
 
 
@@ -143,30 +143,30 @@ dependencies {
     compileOnly "io.vertx:vertx-web-api-service:$vertxVersion"
     annotationProcessor "io.vertx:vertx-web-api-service:$vertxVersion"
 
-    compile("io.vertx:vertx-core:${vertxVersion}")
-    compile("io.vertx:vertx-web:${vertxVersion}")
-    compile "io.vertx:vertx-config:$vertxVersion"
-    compile "io.vertx:vertx-web-client:$vertxVersion"
-    compile("io.vertx:vertx-codegen:${vertxVersion}")
-    compile "io.vertx:vertx-service-proxy:$vertxVersion"
-    compile "io.vertx:vertx-circuit-breaker:$vertxVersion"
-    compile "io.vertx:vertx-web-api-service:$vertxVersion"
-    //compile "io.vertx:vertx-web-validation:$vertxVersion"
-    compile "io.vertx:vertx-auth-jwt:$vertxVersion"
-    compile "io.vertx:vertx-junit5:$vertxVersion"
+    implementation "io.vertx:vertx-core:${vertxVersion}"
+    implementation "io.vertx:vertx-web:${vertxVersion}"
+    implementation "io.vertx:vertx-config:$vertxVersion"
+    implementation "io.vertx:vertx-web-client:$vertxVersion"
+    implementation "io.vertx:vertx-codegen:${vertxVersion}"
+    implementation "io.vertx:vertx-service-proxy:$vertxVersion"
+    implementation "io.vertx:vertx-circuit-breaker:$vertxVersion"
+    implementation "io.vertx:vertx-web-api-service:$vertxVersion"
+    implementation "io.vertx:vertx-auth-jwt:$vertxVersion"
+    implementation "io.vertx:vertx-junit5:$vertxVersion"
     
-    testCompile("io.vertx:vertx-unit:${vertxVersion}")
-    testCompileOnly "org.projectlombok:$lombokVersion"
+    //testCompile "io.vertx:vertx-unit:${vertxVersion}"
+    //testCompile "org.projectlombok:$lombokVersion"
 
-    compile "io.vertx:vertx-jdbc-client:$vertxVersion"
-    //compile "org.hsqldb:hsqldb:$hsqlVersion"
+    implementation "io.vertx:vertx-jdbc-client:$vertxVersion"
+    implementation "io.vertx:vertx-sql-client:$vertxVersion"
 
-    compile "org.slf4j:slf4j-api:$slf4jVersion"
-    compile "org.slf4j:slf4j-log4j12:$slf4jVersion"
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+    implementation "org.slf4j:slf4j-log4j12:$slf4jVersion"
 
     compile "org.projectlombok:lombok:$lombokVersion"
 
-    compile 'com.h2database:h2:1.4.200'
+    implementation 'com.h2database:h2:1.4.200'
+    implementation 'commons-beanutils:commons-beanutils-core:1.8.3'
 
     testImplementation "io.vertx:vertx-junit5:$vertxVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterEngineVersion"
