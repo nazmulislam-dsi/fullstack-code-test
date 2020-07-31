@@ -135,7 +135,7 @@ public class TestUtils {
 
     public static <T> List<T> getObjectListFromJsonString(String jsonStr, Class<T> targetClass) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(jsonStr, new TypeReference<List<T>>(){});
+        return objectMapper.readValue(jsonStr, objectMapper.getTypeFactory().constructCollectionType(List.class, targetClass));
     }
 
     public static <S,T> List<T> transformObjectList(List<S> sourceList, Class<T> targetClass) throws
@@ -196,6 +196,12 @@ public class TestUtils {
         assertEquals(expectedContentType, actual.getHeaders().get("content-type"));
         assertEquals("Created", actual.getStatusMessage());
         assertEquals(Integer.valueOf(201), actual.getStatusCode());
+    }
+
+    public static void assertEmptyResponse(OperationResponse actual) {
+        assertEquals("text/plain", actual.getHeaders().get("content-type"));
+        assertEquals("No Content", actual.getStatusMessage());
+        assertEquals(Integer.valueOf(204), actual.getStatusCode());
     }
 
     public static void assertTextResponse(int expectedStatusCode, String expectedStatusMessage, String expectedResult, OperationResponse actual) {

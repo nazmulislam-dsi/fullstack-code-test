@@ -14,7 +14,7 @@ public interface ServicePollerDao {
   Future<Service> addService(String userId, ServicePostDTO servicePostDTO);
   Future<List<Service>> getServiceList(String userId, Integer serviceId, String serviceName);
   Future<Service> updateServiceName(String userId, Integer id, ServicePutDTO servicePutDTO);
-  Future<Boolean> deleteAllServiceByUserId(String userId);
+  Future<Boolean> deleteAllService(String userId);
 
   static ServicePollerDao create(JDBCClient jdbcClient) {
     return new ServicePollerDaoImpl(jdbcClient);

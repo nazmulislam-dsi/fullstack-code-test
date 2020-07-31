@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.kry.codetest.dto.ServicePostDTO;
 import se.kry.codetest.dto.ServicePutDTO;
+import se.kry.codetest.exception.BadRequestException;
 import se.kry.codetest.model.Service;
 import se.kry.codetest.persistence.ServicePollerDao;
 
@@ -49,7 +50,13 @@ public class ServicePollerDaoImpl implements ServicePollerDao {
                                     promise.fail(result.cause());
                                 } else {
                                     LOG.info("NILOG::ID from DB::"+result.result().getKeys());
-                                    Long newServiceId = result.result().getKeys().getLong(0);
+                                    Long newServiceId;
+                                    if(result.result().getKeys().size()>0){
+                                        newServiceId = result.result().getKeys().getLong(0);
+                                    }else {
+                                        newServiceId = 0l;
+                                        promise.fail(new BadRequestException("Provided information does not matched"));
+                                    }
                                     String sqlGetServiceWithId = "SELECT * FROM SERVICE WHERE id = ?";
                                     connection.queryWithParams(sqlGetServiceWithId,
                                             new JsonArray().add(newServiceId),
@@ -121,6 +128,7 @@ public class ServicePollerDaoImpl implements ServicePollerDao {
         });
         return promise.future();
     }
+
     public static String conditionIfHasParameter(Boolean hasParameter){
 
         if(hasParameter) {
@@ -133,21 +141,65 @@ public class ServicePollerDaoImpl implements ServicePollerDao {
 
     @Override
     public Future<Service> updateServiceName(String userId, Integer id, ServicePutDTO servicePutDTO) {
-        return null;
+        Promise<Service> promise = Promise.promise();
+        jdbcClient.getConnection(res -> {
+            if (res.succeeded()) {
+                SQLConnection connection = res.result();
+                String sql = "UPDATE SERVICE SET name=? WHERE id=? AND userId=?";
+                connection.updateWithParams(sql,
+                        new JsonArray().add(servicePutDTO.getName()).add(id).add(userId),
+                        result -> {
+                            try {
+                                if (result.failed()) {
+                                    LOG.error("NILOG::",result.cause());
+                                    promise.fail(result.cause());
+                                } else {
+                                    LOG.info("NILOG::ID from DB::"+result.result().getKeys());
+                                    Long newServiceId;
+                                    if(result.result().getKeys().size()>0){
+                                        newServiceId = result.result().getKeys().getLong(0);
+                                    }else {
+                                        newServiceId = 0l;
+                                        promise.fail(new BadRequestException("Provided information does not matched"));
+                                    }
+                                    String sqlGetServiceWithId = "SELECT * FROM SERVICE WHERE id = ?";
+                                    connection.queryWithParams(sqlGetServiceWithId,
+                                            new JsonArray().add(newServiceId),
+                                            serviceGetResult -> {
+                                                if (serviceGetResult.failed()) {
+                                                    LOG.error("NILOG::",serviceGetResult.cause());
+                                                    promise.fail(serviceGetResult.cause());
+                                                } else {
+                                                    List<JsonObject> jsonObjectList =
+                                                            serviceGetResult.result().getRows();
+                                                    if (jsonObjectList != null && jsonObjectList.size() == 1) {
+                                                        LOG.info("NILOG::Updated into database.");
+                                                        Service service = new Service(jsonObjectList.get(0));
+                                                        promise.complete(service);
+                                                    }else{
+                                                        promise.fail(new RuntimeException("Update failed."));
+                                                    }
+                                                }
+                                            }
+                                    );
+                                }
+                            } catch (Exception ex) {
+                                LOG.error("NILOG",ex);
+                                promise.fail(ex);
+                            } finally {
+                                connection.close();
+                            }
+                        });
+            } else {
+                promise.fail(res.cause());
+            }
+        });
+        return promise.future();
     }
 
     @Override
-    public Future<Boolean> deleteAllServiceByUserId(String userId) {
+    public Future<Boolean> deleteAllService(String userId) {
         return null;
-    }
-
-    private Handler<AsyncResult<ResultSet>> generatePoolListHandler(Promise<List<Service>> future) {
-        return rs -> {
-            if (rs.failed()) future.fail(rs.cause());
-            rs.result().getRows().stream()
-                    .map(Service::new)
-                    .collect(Collectors.toList());
-        };
     }
 
 }

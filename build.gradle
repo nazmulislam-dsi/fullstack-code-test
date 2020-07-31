@@ -167,6 +167,7 @@ dependencies {
 
     implementation 'com.h2database:h2:1.4.200'
     implementation 'commons-beanutils:commons-beanutils-core:1.8.3'
+    implementation 'commons-validator:commons-validator:1.6'
 
     testImplementation "io.vertx:vertx-junit5:$vertxVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterEngineVersion"
