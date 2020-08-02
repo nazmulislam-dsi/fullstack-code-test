@@ -75,8 +75,8 @@ public class UserDaoImpl implements UserDao {
                                 LOG.info("NILOG::User From DB Size::" + jsonObject.size());
                                 if (jsonObject.size() == 1) {
                                     User userFromDb = new User(jsonObject.get(0));
-                                    LOG.info("NILOG::Password provided::" + user.getPassword());
-                                    LOG.info("NILOG::Password from DB::" + userFromDb.getPassword());
+                                    //LOG.info("NILOG::Password provided::" + user.getPassword());
+                                    //LOG.info("NILOG::Password from DB::" + userFromDb.getPassword());
                                     if (userFromDb.getPassword().equals(user.getPassword())) {
                                         matched = true;
                                     } else {
