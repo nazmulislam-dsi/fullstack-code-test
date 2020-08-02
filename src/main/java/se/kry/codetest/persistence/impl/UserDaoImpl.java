@@ -37,15 +37,15 @@ public class UserDaoImpl implements UserDao {
                         result -> {
                             try {
                                 if (result.failed()) {
-                                    LOG.error("NILOG::",result.cause());
+                                    LOG.error("NILOG::", result.cause());
                                     promise.fail(result.cause());
                                 } else {
                                     LOG.info("NILOG::Inserted into database.");
                                     promise.complete(true);
                                 }
-                            }catch (Exception ex){
+                            } catch (Exception ex) {
                                 promise.fail(ex);
-                            }finally {
+                            } finally {
                                 connection.close();
                             }
                         });
@@ -72,11 +72,11 @@ public class UserDaoImpl implements UserDao {
                                 }
                                 Boolean matched = false;
                                 List<JsonObject> jsonObject = result.result().getRows();
-                                LOG.info("NILOG::User From DB Size::"+jsonObject.size());
+                                LOG.info("NILOG::User From DB Size::" + jsonObject.size());
                                 if (jsonObject.size() == 1) {
                                     User userFromDb = new User(jsonObject.get(0));
-                                    LOG.info("NILOG::Password provided::"+user.getPassword());
-                                    LOG.info("NILOG::Password from DB::"+userFromDb.getPassword());
+                                    LOG.info("NILOG::Password provided::" + user.getPassword());
+                                    LOG.info("NILOG::Password from DB::" + userFromDb.getPassword());
                                     if (userFromDb.getPassword().equals(user.getPassword())) {
                                         matched = true;
                                     } else {
@@ -86,9 +86,9 @@ public class UserDaoImpl implements UserDao {
                                     LOG.info("NILOG::Could not find any user with given information.");
                                 }
                                 promise.complete(matched);
-                            }catch (Exception ex){
+                            } catch (Exception ex) {
                                 promise.fail(ex);
-                            }finally {
+                            } finally {
                                 connection.close();
                             }
                         });

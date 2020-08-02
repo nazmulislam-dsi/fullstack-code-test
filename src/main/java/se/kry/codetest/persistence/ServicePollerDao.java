@@ -11,13 +11,19 @@ import java.util.List;
 
 public interface ServicePollerDao {
 
-  Future<Service> addService(String userId, ServicePostDTO servicePostDTO);
-  Future<List<Service>> getServiceList(String userId, Integer serviceId, String serviceName);
-  Future<Service> updateServiceName(String userId, Integer id, ServicePutDTO servicePutDTO);
-  Future<Boolean> deleteAllService(String userId);
+    static ServicePollerDao create(JDBCClient jdbcClient) {
+        return new ServicePollerDaoImpl(jdbcClient);
+    }
 
-  static ServicePollerDao create(JDBCClient jdbcClient) {
-    return new ServicePollerDaoImpl(jdbcClient);
-  }
+    Future<Service> addService(String userId, ServicePostDTO servicePostDTO);
 
+    Future<List<Service>> getServiceList(String userId, Integer serviceId, String serviceName);
+
+    Future<Service> updateServiceName(String userId, Integer id, ServicePutDTO servicePutDTO);
+
+    Future<Boolean> deleteAllService(String userId);
+
+    Future<Boolean> deleteAllService();
+
+    Future<Boolean> updateServiceStatus(Integer id, String status);
 }

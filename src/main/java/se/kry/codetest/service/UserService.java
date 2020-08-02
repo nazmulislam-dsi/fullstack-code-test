@@ -13,6 +13,10 @@ import se.kry.codetest.service.impl.UserServiceImpl;
 @WebApiServiceGen
 public interface UserService {
 
+    static UserService create(UserDao userDao, JWTAuth auth) {
+        return new UserServiceImpl(userDao, auth);
+    }
+
     void login(
             AuthCredentials body,
             OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
@@ -20,9 +24,5 @@ public interface UserService {
     void register(
             AuthCredentials body,
             OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
-
-    static UserService create(UserDao userDao, JWTAuth auth) {
-        return new UserServiceImpl(userDao, auth);
-    }
 
 }

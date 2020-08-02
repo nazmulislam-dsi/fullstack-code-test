@@ -39,14 +39,14 @@ public class UsersServiceTest extends BaseServicesTest {
     @BeforeAll
     public void beforeAll(Vertx vertx, VertxTestContext testContext) throws Exception {
         super.beforeAll(vertx, testContext);
-        setupDatabase(vertx, conf).onComplete(database->{
-            if(database.succeeded()) {
+        setupDatabase(vertx, conf).onComplete(database -> {
+            if (database.succeeded()) {
                 jdbcClient = database.result();
-                setupSchema(vertx, testContext, jdbcClient).onComplete(schema->{
-                    if(schema.succeeded()){
-                        if(schema.result()){
-                            setupAuth(vertx,testContext,conf).onComplete(jwtAuth -> {
-                                if(jwtAuth.succeeded()){
+                setupSchema(vertx, testContext, jdbcClient).onComplete(schema -> {
+                    if (schema.succeeded()) {
+                        if (schema.result()) {
+                            setupAuth(vertx, testContext, conf).onComplete(jwtAuth -> {
+                                if (jwtAuth.succeeded()) {
                                     auth = jwtAuth.result();
                                     userDao = UserDao.create(jdbcClient);
                                     userService = UserService.create(userDao, auth);
@@ -94,16 +94,16 @@ public class UsersServiceTest extends BaseServicesTest {
                                         throw new RuntimeException("Error occurred while executing the query.");
                                     }
                                     List<JsonObject> jsonObject = result.result().getRows();
-                                    LOG.info("NILOG::User From DB Size::"+jsonObject.size());
+                                    LOG.info("NILOG::User From DB Size::" + jsonObject.size());
                                     test.verify(() -> {
                                         assertEquals(1, jsonObject.size());
                                         assertEquals(credentialsHashed.getPassword(),
                                                 jsonObject.get(0).getString("password"));
                                     });
                                     test.completeNow();
-                                }catch (Exception ex){
+                                } catch (Exception ex) {
                                     test.failNow(ex);
-                                }finally {
+                                } finally {
                                     connection.close();
                                 }
                             });
@@ -120,15 +120,57 @@ public class UsersServiceTest extends BaseServicesTest {
                 .onComplete(v -> {
                     userService.register(new AuthCredentials("tester", "tester"),
                             new OperationRequest(), test.succeeding(operationResponse -> {
-                        test.verify(() -> {
-                            LOG.info("NILOG::register method called.");
-                            assertTextResponse(400,
-                                    "Bad Request",
-                                    "User tester already exists.", operationResponse);
-                        });
-                        test.completeNow();
-                    }));
+                                test.verify(() -> {
+                                    LOG.info("NILOG::register method called.");
+                                    assertTextResponse(400,
+                                            "Bad Request",
+                                            "User tester already exists.", operationResponse);
+                                });
+                                test.completeNow();
+                            }));
                 });
+    }
+
+    @Test
+    public void registerWithEmptyUserNameTest(VertxTestContext test) {
+        userService.register(new AuthCredentials("", ""),
+                new OperationRequest(), test.succeeding(operationResponse -> {
+                    test.verify(() -> {
+                        LOG.info("NILOG::register method called.");
+                        assertTextResponse(400,
+                                "Bad Request",
+                                "Information is not valid.", operationResponse);
+                    });
+                    test.completeNow();
+                }));
+    }
+
+    @Test
+    public void registerWithEmptyPasswordTest(VertxTestContext test) {
+        userService.register(new AuthCredentials("tester", ""),
+                new OperationRequest(), test.succeeding(operationResponse -> {
+                    test.verify(() -> {
+                        LOG.info("NILOG::register method called.");
+                        assertTextResponse(400,
+                                "Bad Request",
+                                "Information is not valid.", operationResponse);
+                    });
+                    test.completeNow();
+                }));
+    }
+
+    @Test
+    public void registerWithShortPasswordTest(VertxTestContext test) {
+        userService.register(new AuthCredentials("tester", "test"),
+                new OperationRequest(), test.succeeding(operationResponse -> {
+                    test.verify(() -> {
+                        LOG.info("NILOG::register method called.");
+                        assertTextResponse(400,
+                                "Bad Request",
+                                "Information is not valid.", operationResponse);
+                    });
+                    test.completeNow();
+                }));
     }
 
     @Test
@@ -137,12 +179,12 @@ public class UsersServiceTest extends BaseServicesTest {
                 .onComplete(v -> {
                     userService.login(new AuthCredentials("tester", "tester"),
                             new OperationRequest(), test.succeeding(operationResponse -> {
-                        test.verify(() -> {
-                            assertSuccessResponse("text/plain", operationResponse);
-                            assertNotNull(operationResponse.getPayload().toString());
-                        });
-                        test.completeNow();
-                    }));
+                                test.verify(() -> {
+                                    assertSuccessResponse("text/plain", operationResponse);
+                                    assertNotNull(operationResponse.getPayload().toString());
+                                });
+                                test.completeNow();
+                            }));
                 });
     }
 
@@ -169,13 +211,13 @@ public class UsersServiceTest extends BaseServicesTest {
                 .onComplete(v -> {
                     userService.login(credentials.setPassword("tester2"),
                             new OperationRequest(), test.succeeding(operationResponse -> {
-                        test.verify(() -> {
-                            assertTextResponse(400,
-                                    "Bad Request",
-                                    "Wrong username or password", operationResponse);
-                        });
-                        test.completeNow();
-                    }));
+                                test.verify(() -> {
+                                    assertTextResponse(400,
+                                            "Bad Request",
+                                            "Wrong username or password", operationResponse);
+                                });
+                                test.completeNow();
+                            }));
                 });
     }
 

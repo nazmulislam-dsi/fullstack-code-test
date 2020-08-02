@@ -1,13 +1,10 @@
 package se.kry.codetest.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
@@ -18,17 +15,14 @@ import io.vertx.ext.web.api.OperationResponse;
 import io.vertx.junit5.VertxTestContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.commons.beanutils.BeanUtils;
 
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestUtils {
     private static final Logger LOG = LoggerFactory.getLogger(TestUtils.class);
+
     public static Future<Boolean> wipeDatabase(JDBCClient jdbcClient) {
         Promise<Boolean> promise = Promise.promise();
         jdbcClient.getConnection(res -> {
@@ -39,7 +33,7 @@ public class TestUtils {
                         result -> {
                             try {
                                 if (result.failed()) {
-                                    LOG.error("NILOG::",result.cause());
+                                    LOG.error("NILOG::", result.cause());
                                     promise.fail(result.cause());
                                 } else {
                                     LOG.info("NILOG::Delete data from tables.");
@@ -83,7 +77,7 @@ public class TestUtils {
                             if (ddl.failed()) {
                                 LOG.error("NILOG::Could not able to setup schema, exiting!!");
                                 testContext.failNow(ddl.cause());
-                            }else{
+                            } else {
                                 promise.complete(true);
                             }
                         });
@@ -92,10 +86,10 @@ public class TestUtils {
         return promise.future();
     }
 
-    public static Future<JWTAuth> setupAuth(Vertx vertx, VertxTestContext testContext, JsonObject conf){
+    public static Future<JWTAuth> setupAuth(Vertx vertx, VertxTestContext testContext, JsonObject conf) {
         Promise<JWTAuth> promise = Promise.promise();
         String jwkPath = conf.getString("jwk.path");
-        loadResource(vertx,jwkPath).onComplete(jwk -> {
+        loadResource(vertx, jwkPath).onComplete(jwk -> {
             if (jwk.failed()) testContext.failNow(jwk.cause());
             else {
                 JsonObject jwkObject = jwk.result().toJsonObject();
@@ -113,10 +107,10 @@ public class TestUtils {
         String driverClassName = conf.getString("datasource.driver.class.name");
         String username = conf.getString("datasource.driver.username");
         String password = conf.getString("datasource.driver.password");
-        LOG.info("NILOG::dbUrl::"+dbUrl);
-        LOG.info("NILOG::driverClassName::"+driverClassName);
-        LOG.info("NILOG::username::"+username);
-        LOG.info("NILOG::password::"+password);
+        LOG.info("NILOG::dbUrl::" + dbUrl);
+        LOG.info("NILOG::driverClassName::" + driverClassName);
+        LOG.info("NILOG::username::" + username);
+        LOG.info("NILOG::password::" + password);
 
         JDBCClient jdbcClient = JDBCClient.createShared(vertx,
                 new JsonObject().put("url", dbUrl)
@@ -126,47 +120,6 @@ public class TestUtils {
         promise.complete(jdbcClient);
         return promise.future();
 
-    }
-
-    public static <T> T getObjectFromJsonString(String jsonStr, Class<T> targetClass) throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(jsonStr, targetClass);
-    }
-
-    public static <T> List<T> getObjectListFromJsonString(String jsonStr, Class<T> targetClass) throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(jsonStr, objectMapper.getTypeFactory().constructCollectionType(List.class, targetClass));
-    }
-
-    public static <S,T> List<T> transformObjectList(List<S> sourceList, Class<T> targetClass) throws
-            InstantiationException, IllegalAccessException, InvocationTargetException {
-        List<T> listToReturn = new ArrayList<>();
-        if(!isEmpty(sourceList)){
-            for(Object sourceObject : sourceList){
-                listToReturn.add(transformObject(sourceObject, targetClass));
-            }
-        }
-        return listToReturn;
-    }
-
-    public static <S,T> T transformObject(S source, Class<T> targetClass) throws InstantiationException,
-            IllegalAccessException, InvocationTargetException {
-        if(source == null) {
-            return null;
-        }
-        T newTargetObject = targetClass.newInstance();
-        BeanUtils.copyProperties(source, newTargetObject);
-        return newTargetObject;
-    }
-
-    public static boolean isEmpty(List list) {
-        if (list == null) {
-            return true;
-        }
-        if (list.size() == 0) {
-            return true;
-        }
-        return false;
     }
 
     private static Future<Buffer> loadResource(Vertx vertx, String path) {
@@ -190,6 +143,19 @@ public class TestUtils {
         assertEquals(Integer.valueOf(200), actual.getStatusCode());
         assertEquals("OK", actual.getStatusMessage());
         assertEquals(expectedContentType, actual.getHeaders().get("content-type"));
+    }
+
+    public static void assertBadRequestResponse(OperationResponse actual) {
+        assertEquals(Integer.valueOf(400), actual.getStatusCode());
+        assertEquals("Bad Request", actual.getStatusMessage());
+        assertEquals("text/plain", actual.getHeaders().get("content-type"));
+    }
+
+    public static void assertBadRequestResponse(OperationResponse actual, String expectedStatusMessage) {
+        assertEquals(Integer.valueOf(400), actual.getStatusCode());
+        assertEquals("Bad Request", actual.getStatusMessage());
+        assertEquals(expectedStatusMessage, actual.getPayload().toString());
+        assertEquals("text/plain", actual.getHeaders().get("content-type"));
     }
 
     public static void assertSuccessCreateResponse(String expectedContentType, OperationResponse actual) {

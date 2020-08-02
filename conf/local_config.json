@@ -1,8 +1,9 @@
 {
-  "http.port":8080,
+  "http.port": 8080,
   "datasource.url": "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;",
   "datasource.driver.class.name": "org.h2.Driver",
   "datasource.driver.username": "sa",
   "datasource.driver.password": "",
-  "jwk.path": "jwk.json"
+  "jwk.path": "jwk.json",
+  "poller.status.check.scheduler.time.in.ms": 300000
 }

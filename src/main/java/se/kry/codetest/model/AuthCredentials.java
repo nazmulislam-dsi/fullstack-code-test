@@ -15,31 +15,31 @@ import se.kry.codetest.utils.HashUtils;
 @Data
 public class AuthCredentials {
 
-  @Accessors(chain = true)
-  @Setter(onMethod = @__({@Fluent}))
-  private String username;
-  @Accessors(chain = true)
-  @Setter(onMethod = @__({@Fluent}))
-  private String password;
+    @Accessors(chain = true)
+    @Setter(onMethod = @__({@Fluent}))
+    private String username;
+    @Accessors(chain = true)
+    @Setter(onMethod = @__({@Fluent}))
+    private String password;
 
-  public AuthCredentials(JsonObject json) {
-    AuthCredentialsConverter.fromJson(json, this);
-  }
+    public AuthCredentials(JsonObject json) {
+        AuthCredentialsConverter.fromJson(json, this);
+    }
 
-  public AuthCredentials(String jsonStr) {
-    AuthCredentialsConverter.fromJson(new JsonObject(jsonStr), this);
-  }
+    public AuthCredentials(String jsonStr) {
+        AuthCredentialsConverter.fromJson(new JsonObject(jsonStr), this);
+    }
 
-  public JsonObject toJson() {
-    JsonObject json = new JsonObject();
-    AuthCredentialsConverter.toJson(this, json);
-    return json;
-  }
+    public JsonObject toJson() {
+        JsonObject json = new JsonObject();
+        AuthCredentialsConverter.toJson(this, json);
+        return json;
+    }
 
-  @GenIgnore
-  @Fluent
-  public AuthCredentials hashPassword() {
-    this.setPassword(HashUtils.createHash(this.getPassword()));
-    return this;
-  }
+    @GenIgnore
+    @Fluent
+    public AuthCredentials hashPassword() {
+        this.setPassword(HashUtils.createHash(this.getPassword()));
+        return this;
+    }
 }

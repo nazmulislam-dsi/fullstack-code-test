@@ -5,6 +5,7 @@ import io.vertx.codegen.annotations.Fluent;
 import io.vertx.core.json.JsonObject;
 import lombok.*;
 import lombok.experimental.Accessors;
+
 import java.time.Instant;
 
 @DataObject(generateConverter = true)
@@ -13,7 +14,8 @@ import java.time.Instant;
 @EqualsAndHashCode
 @Data
 public
-class Service {;
+class Service {
+    ;
     @Accessors(chain = true)
     @Setter(onMethod = @__({@Fluent}))
     private long id;

@@ -2,23 +2,22 @@ package se.kry.codetest.service;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.web.api.OperationRequest;
 import io.vertx.ext.web.api.OperationResponse;
 import io.vertx.ext.web.api.generator.WebApiServiceGen;
 import se.kry.codetest.dto.ServicePostDTO;
 import se.kry.codetest.dto.ServicePutDTO;
 import se.kry.codetest.persistence.ServicePollerDao;
-import se.kry.codetest.service.impl.ServicePollerServiceImpl;
+import se.kry.codetest.service.impl.PollerServiceImpl;
 
 @WebApiServiceGen
-public interface ServicePollerService {
-    static ServicePollerService create(ServicePollerDao servicePollerDao, JWTAuth auth) {
-        return new ServicePollerServiceImpl(servicePollerDao, auth);
+public interface PollerService {
+    static PollerService create(ServicePollerDao servicePollerDao) {
+        return new PollerServiceImpl(servicePollerDao);
     }
 
     void getServiceList(Integer serviceId, String serviceName,
-            OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
+                        OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
 
     void deleteAllService(
             OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
@@ -27,6 +26,6 @@ public interface ServicePollerService {
                        OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
 
     void updateService(Integer serviceId, ServicePutDTO body,
-            OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
+                       OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler);
 
 }

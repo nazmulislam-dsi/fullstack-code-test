@@ -6,7 +6,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
-import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.web.api.OperationRequest;
 import io.vertx.ext.web.api.OperationResponse;
 import org.apache.commons.validator.routines.UrlValidator;
@@ -18,29 +17,27 @@ import se.kry.codetest.dto.ServicePutDTO;
 import se.kry.codetest.exception.BadRequestException;
 import se.kry.codetest.model.Service;
 import se.kry.codetest.persistence.ServicePollerDao;
-import se.kry.codetest.service.ServicePollerService;
+import se.kry.codetest.service.PollerService;
 
 import java.util.stream.Collectors;
 
-public class ServicePollerServiceImpl implements ServicePollerService {
-    private static final Logger LOG = LoggerFactory.getLogger(ServicePollerService.class);
+public class PollerServiceImpl implements PollerService {
+    private static final Logger LOG = LoggerFactory.getLogger(PollerService.class);
 
     ServicePollerDao servicePollerDao;
-    JWTAuth auth;
 
-    public ServicePollerServiceImpl(ServicePollerDao servicePollerDao, JWTAuth auth) {
+    public PollerServiceImpl(ServicePollerDao servicePollerDao) {
         this.servicePollerDao = servicePollerDao;
-        this.auth = auth;
     }
 
     @Override
     public void getServiceList(Integer serviceId, String serviceName,
                                OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler) {
         LOG.info("NILOG::getServiceList has called.");
-        servicePollerDao.getServiceList(context.getUser().getString("userId"),serviceId,serviceName)
+        servicePollerDao.getServiceList(context.getUser().getString("userId"), serviceId, serviceName)
                 .onComplete(event -> {
-                    if(event.succeeded()){
-                        if(event.result().size()>0) {
+                    if (event.succeeded()) {
+                        if (event.result().size() > 0) {
                             resultHandler.handle(Future.succeededFuture(
                                     new OperationResponse()
                                             .setStatusCode(200)
@@ -50,7 +47,7 @@ public class ServicePollerServiceImpl implements ServicePollerService {
                                                     new JsonArray(event.result().stream().map(Service::toJson)
                                                             .collect(Collectors.toList())).toBuffer()))
                             );
-                        }else{
+                        } else {
                             resultHandler.handle(Future.succeededFuture(
                                     new OperationResponse()
                                             .setStatusCode(204)
@@ -74,13 +71,14 @@ public class ServicePollerServiceImpl implements ServicePollerService {
     public void deleteAllService(OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler) {
         servicePollerDao.deleteAllService(context.getUser().getString("userId")).onComplete(ar -> {
             if (ar.succeeded()) {
-                new OperationResponse()
-                        .setStatusCode(204)
-                        .setStatusMessage("No content")
-                        .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
-                        .setPayload(Buffer.buffer(""));
+                resultHandler.handle(Future.succeededFuture(
+                        new OperationResponse()
+                                .setStatusCode(204)
+                                .setStatusMessage("No Content")
+                                .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
+                                .setPayload(Buffer.buffer(""))));
             } else {
-                if(ar.cause() instanceof BadRequestException){
+                if (ar.cause() instanceof BadRequestException) {
                     resultHandler.handle(Future.succeededFuture(
                             new OperationResponse()
                                     .setStatusCode(400)
@@ -103,23 +101,23 @@ public class ServicePollerServiceImpl implements ServicePollerService {
     public void createService(ServicePostDTO body,
                               OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler) {
         LOG.info("NILOG::createService has called.");
-        LOG.info("NILOG::servicePostDTO"+body.toString());
+        LOG.info("NILOG::servicePostDTO" + body.toString());
         UrlValidator urlValidator = new UrlValidator();
-        if(urlValidator.isValid(body.getUrl())) {
+        if (urlValidator.isValid(body.getUrl())) {
             servicePollerDao.addService(context.getUser().getString("userId"), body).onComplete(ar -> {
                 if (ar.succeeded()) {
                     if (ar.result() == null) {
-                        LOG.warn("Poller with is name exist. Poller name: " + body.getName());
+                        LOG.warn("ServicePoller with is name exist. ServicePoller name: " + body.getName());
                         resultHandler.handle(Future.succeededFuture(
                                 new OperationResponse()
                                         .setStatusCode(400)
                                         .setStatusMessage("Bad Request")
                                         .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
                                         .setPayload(
-                                                Buffer.buffer("Invaild request with service name: " + body.getName())))
+                                                Buffer.buffer("Invalid request with service name: " + body.getName())))
                         );
                     } else {
-                        LOG.info("Poller successfully created: {}", ar.result());
+                        LOG.info("ServicePoller successfully created: {}", ar.result());
                         resultHandler.handle(Future.succeededFuture(
                                 new OperationResponse()
                                         .setStatusCode(201)
@@ -142,7 +140,7 @@ public class ServicePollerServiceImpl implements ServicePollerService {
                                         .setStatusCode(400)
                                         .setStatusMessage("Bad Request")
                                         .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
-                                        .setPayload(Buffer.buffer("Invaild request with service name: "
+                                        .setPayload(Buffer.buffer("Invalid request with service name: "
                                                 + body.getName()))));
                     } else {
                         resultHandler.handle(Future.succeededFuture(
@@ -154,13 +152,13 @@ public class ServicePollerServiceImpl implements ServicePollerService {
                     }
                 }
             });
-        }else {
+        } else {
             resultHandler.handle(Future.succeededFuture(
                     new OperationResponse()
                             .setStatusCode(400)
                             .setStatusMessage("Bad Request")
                             .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
-                            .setPayload(Buffer.buffer("Invaild request with url: "
+                            .setPayload(Buffer.buffer("Invalid request with url: "
                                     + body.getUrl()))));
         }
     }
@@ -169,22 +167,22 @@ public class ServicePollerServiceImpl implements ServicePollerService {
     public void updateService(Integer serviceId, ServicePutDTO body,
                               OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler) {
         LOG.info("NILOG::updateService has called.");
-        LOG.info("NILOG::servicePutDTO"+body.toString());
-        LOG.info("NILOG::userId::"+context.getUser().getString("userId"));
-        servicePollerDao.updateServiceName(context.getUser().getString("userId"),serviceId,body).onComplete(ar -> {
+        LOG.info("NILOG::servicePutDTO" + body.toString());
+        LOG.info("NILOG::userId::" + context.getUser().getString("userId"));
+        servicePollerDao.updateServiceName(context.getUser().getString("userId"), serviceId, body).onComplete(ar -> {
             if (ar.succeeded()) {
-                if (ar.result()==null) {
-                    LOG.warn("Poller with is name exist. Poller name: " + body.getName());
+                if (ar.result() == null) {
+                    LOG.warn("ServicePoller with is name exist. ServicePoller name: " + body.getName());
                     resultHandler.handle(Future.succeededFuture(
                             new OperationResponse()
                                     .setStatusCode(400)
                                     .setStatusMessage("Bad Request")
                                     .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
                                     .setPayload(
-                                            Buffer.buffer("Invaild request with service name: " + body.getName())))
+                                            Buffer.buffer("Invalid request with service name: " + body.getName())))
                     );
                 } else {
-                    LOG.info("Poller successfully updated: {}", ar.result());
+                    LOG.info("ServicePoller successfully updated: {}", ar.result());
                     resultHandler.handle(Future.succeededFuture(
                             new OperationResponse()
                                     .setStatusCode(200)
@@ -194,20 +192,20 @@ public class ServicePollerServiceImpl implements ServicePollerService {
                     );
                 }
             } else {
-                if(ar.cause() instanceof BadRequestException){
+                if (ar.cause() instanceof BadRequestException) {
                     resultHandler.handle(Future.succeededFuture(
                             new OperationResponse()
                                     .setStatusCode(400)
                                     .setStatusMessage("Bad Request")
                                     .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
                                     .setPayload(Buffer.buffer(ar.cause().getMessage()))));
-                }else if(ar.cause() instanceof JdbcSQLIntegrityConstraintViolationException){
+                } else if (ar.cause() instanceof JdbcSQLIntegrityConstraintViolationException) {
                     resultHandler.handle(Future.succeededFuture(
                             new OperationResponse()
                                     .setStatusCode(400)
                                     .setStatusMessage("Bad Request")
                                     .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
-                                    .setPayload(Buffer.buffer("Invaild request with service name: "
+                                    .setPayload(Buffer.buffer("Invalid request with service name: "
                                             + body.getName()))));
                 } else {
                     resultHandler.handle(Future.succeededFuture(

@@ -10,6 +10,7 @@ import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.jwt.JWTOptions;
 import io.vertx.ext.web.api.OperationRequest;
 import io.vertx.ext.web.api.OperationResponse;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.kry.codetest.model.AuthCredentials;
@@ -64,40 +65,51 @@ public class UserServiceImpl implements UserService {
     @Override
     public void register(AuthCredentials body, OperationRequest context,
                          Handler<AsyncResult<OperationResponse>> resultHandler) {
-        body.hashPassword();
-        userDao.addUser(body).onComplete(ar -> {
-            if (ar.succeeded()) {
-                if (!ar.result()) {
-                    LOG.warn("User is trying to register again: " + body.getUsername());
-                    resultHandler.handle(Future.succeededFuture(
-                            new OperationResponse()
-                                    .setStatusCode(400)
-                                    .setStatusMessage("Bad Request")
-                                    .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
-                                    .setPayload(Buffer.buffer("Username or password format is not correct")))
-                    );
+        if (StringUtils.isNotBlank(body.getUsername()) && StringUtils.isNotBlank(body.getPassword())
+                && body.getPassword().length() >= 6) {
+            body.hashPassword();
+            userDao.addUser(body).onComplete(ar -> {
+                if (ar.succeeded()) {
+                    if (!ar.result()) {
+                        LOG.warn("User is trying to register again: " + body.getUsername());
+                        resultHandler.handle(Future.succeededFuture(
+                                new OperationResponse()
+                                        .setStatusCode(400)
+                                        .setStatusMessage("Bad Request")
+                                        .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
+                                        .setPayload(Buffer.buffer("Username or password format is not correct")))
+                        );
+                    } else {
+                        LOG.info("User successfully registered: {}", body.getUsername());
+                        resultHandler.handle(Future.succeededFuture(
+                                OperationResponse.completedWithPlainText(
+                                        Buffer.buffer(generateToken(body.getUsername())))
+                        ));
+                    }
                 } else {
-                    LOG.info("User successfully registered: {}", body.getUsername());
-                    resultHandler.handle(Future.succeededFuture(
-                            OperationResponse.completedWithPlainText(
-                                    Buffer.buffer(generateToken(body.getUsername())))
-                    ));
+                    if (ar.cause() instanceof JdbcSQLIntegrityConstraintViolationException) {
+                        LOG.warn("User is trying to register again: " + body.getUsername());
+                        resultHandler.handle(Future.succeededFuture(
+                                new OperationResponse()
+                                        .setStatusCode(400)
+                                        .setStatusMessage("Bad Request")
+                                        .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
+                                        .setPayload(Buffer.buffer("User " + body.getUsername() + " already exists.")))
+                        );
+                    } else {
+                        resultHandler.handle(Future.failedFuture(ar.cause()));
+                    }
                 }
-            } else {
-                if(ar.cause() instanceof JdbcSQLIntegrityConstraintViolationException){
-                    LOG.warn("User is trying to register again: " + body.getUsername());
-                    resultHandler.handle(Future.succeededFuture(
-                            new OperationResponse()
-                                    .setStatusCode(400)
-                                    .setStatusMessage("Bad Request")
-                                    .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
-                                    .setPayload(Buffer.buffer("User " + body.getUsername() + " already exists.")))
-                    );
-                }else {
-                    resultHandler.handle(Future.failedFuture(ar.cause()));
-                }
-            }
-        });
+            });
+        } else {
+            resultHandler.handle(Future.succeededFuture(
+                    new OperationResponse()
+                            .setStatusCode(400)
+                            .setStatusMessage("Bad Request")
+                            .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
+                            .setPayload(Buffer.buffer("Information is not valid.")))
+            );
+        }
     }
 
     private String generateToken(String userId) {

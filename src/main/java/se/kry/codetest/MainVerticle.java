@@ -21,10 +21,13 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.serviceproxy.ServiceBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kry.codetest.event.PollerTask;
+import se.kry.codetest.event.impl.PollerTaskImpl;
 import se.kry.codetest.persistence.ServicePollerDao;
 import se.kry.codetest.persistence.UserDao;
-import se.kry.codetest.service.ServicePollerService;
+import se.kry.codetest.service.PollerService;
 import se.kry.codetest.service.UserService;
+import se.kry.codetest.worker.PollerWorker;
 
 import java.nio.charset.Charset;
 
@@ -33,25 +36,22 @@ import java.util.List;
 
 public class MainVerticle extends AbstractVerticle {
 
-    //private final HashMap<String, String> services = new HashMap<>();
-    //private final BackgroundPoller poller = new BackgroundPoller();
-
-    HttpServer server;
-    ServiceBinder serviceBinder;
-
-    List<MessageConsumer<JsonObject>> registeredConsumers = new ArrayList<>();
-
     private static final Logger LOG;
 
     static {
         LOG = LoggerFactory.getLogger(MainVerticle.class);
     }
 
+    HttpServer server;
+    ServiceBinder serviceBinder;
+    List<MessageConsumer<JsonObject>> registeredConsumers = new ArrayList<>();
+    long timerID = 0l;
+    JDBCClient jdbcClient;
+
     @Override
     public void init(final Vertx vertx, final Context context) {
         super.init(vertx, context);
     }
-
 
 
     @Override
@@ -63,32 +63,30 @@ public class MainVerticle extends AbstractVerticle {
             else {
                 LOG.info("NILOG::http.port from property :: " + config().getInteger("http.port", 8080));
 
-                String dbUrl = config().getString("datasource.url", "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;");
+                String dbUrl = config().getString("datasource.url",
+                        "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;");
                 String driverClassName = config().getString("datasource.driver.class.name", "org.h2.Driver");
                 String username = config().getString("datasource.driver.username", "sa");
                 String password = config().getString("datasource.driver.password", "");
                 Boolean setupDbSchema = config().getBoolean("datasource.schema.setup", true);
-                /*Boolean jwtAlgorithm = config().getBoolean("jwt.algorithm");
-                Boolean jwtPublicKey = config().getBoolean("jwt.publicKey");
-                Boolean jwtSecretKey = config().getBoolean("jwt.secretKey");*/
+                int delay = config().getInteger("poller.status.check.scheduler.time.in.ms",30000);
+                int workerPoolSize = config().getInteger("worker.pool.size",10);
+                Boolean populatedDataSQL = config().getBoolean("populate.data.sql",true);
 
-                JDBCClient jdbcClient = JDBCClient.createShared(vertx,
+                jdbcClient = JDBCClient.createShared(vertx,
                         new JsonObject().put("url", dbUrl)
                                 .put("user", username)
                                 .put("password", password)
-                                .put("driver_class", driverClassName).put("max_pool_size", 30), "dataSource");
-                if(setupDbSchema){
-                    setUpDDL(jdbcClient, result -> {
+                                .put("driver_class", driverClassName)
+                                .put("max_pool_size", 30), "dataSource");
+                if (setupDbSchema) {
+                    setUpDDL(jdbcClient).onComplete(result -> {
                         LOG.info("NILOG::setUpDDL done.");
+                        environmentConfig(jwk,workerPoolSize,delay,promise,populatedDataSQL);
                     });
+                }else{
+                    environmentConfig(jwk,workerPoolSize,delay,promise,populatedDataSQL);
                 }
-                JsonObject jwkObject = jwk.result().toJsonObject();
-                PubSecKeyOptions pubSecKeyOptions = new PubSecKeyOptions(jwkObject);
-                JWTAuth auth = JWTAuth.create(vertx, new JWTAuthOptions().addPubSecKey(pubSecKeyOptions));
-                ServicePollerDao servicePollerDao = ServicePollerDao.create(jdbcClient);
-                UserDao userDao  = UserDao.create(jdbcClient);
-                startServices(servicePollerDao,userDao,auth);
-                startHttpServer(auth).onComplete(promise);
             }
         });
 
@@ -96,9 +94,68 @@ public class MainVerticle extends AbstractVerticle {
 
     @Override
     public void stop() throws Exception {
-        super.stop();
-        if(server != null) server.close();
+        if(timerID != 0l) vertx.cancelTimer(timerID);
+        if (server != null) server.close();
         registeredConsumers.forEach(c -> serviceBinder.unregister(c));
+    }
+
+    private void environmentConfig(AsyncResult<Buffer> jwk, int workerPoolSize, int delay,
+                                           Promise<Void> promise, Boolean populatedDataSQL){
+        JsonObject jwkObject = jwk.result().toJsonObject();
+        PubSecKeyOptions pubSecKeyOptions = new PubSecKeyOptions(jwkObject);
+        JWTAuth auth = JWTAuth.create(vertx, new JWTAuthOptions().addPubSecKey(pubSecKeyOptions));
+        ServicePollerDao servicePollerDao = ServicePollerDao.create(jdbcClient);
+        UserDao userDao = UserDao.create(jdbcClient);
+        startServices(servicePollerDao, userDao, auth);
+
+        servicePollerDao.deleteAllService().onComplete(event -> {
+            LOG.info("NILOG::All existing services has deleted.");
+        });
+
+        DeploymentOptions workerOpts = new DeploymentOptions()
+                .setWorker(true)
+                .setWorkerPoolSize(workerPoolSize);
+
+        vertx.deployVerticle(new PollerWorker(vertx), workerOpts, r -> {
+            if(r.succeeded()){
+                System.out.println("Successfully deployed worker verticle.");
+            } else {
+                promise.fail(r.cause());
+            }
+        });
+
+        PollerTask pollerTask = PollerTask.createProxy(vertx, "polling.service_manager");
+
+        timerID = vertx.setPeriodic(delay, aLong -> {
+            pollerTask.updateStatusOfServiceByPolling(event -> {
+                if(event.failed()){
+                    LOG.error("NILOG::",event.cause());
+                    promise.fail(event.cause());
+                }else{
+                    LOG.info("Service status updated.");
+                }
+            });
+        });
+
+        startHttpServer(auth).onComplete(event -> {
+            if(event.failed()){
+                LOG.error("NILOG::Stopping everything.");
+                promise.fail(event.cause());
+            }else{
+                if(populatedDataSQL){
+                    injectDataSql(jdbcClient).onComplete(result -> {
+                        if(result.succeeded()) {
+                            LOG.info("NILOG::injectDataSql done.");
+                            promise.complete();
+                        }else{
+                            promise.fail(result.cause());
+                        }
+                    });
+                }else{
+                    promise.complete();
+                }
+            }
+        });
     }
 
     private Future<Buffer> loadResource(String path) {
@@ -120,9 +177,6 @@ public class MainVerticle extends AbstractVerticle {
             if (openAPI3RouterFactoryAsyncResult.succeeded()) {
                 OpenAPI3RouterFactory routerFactory = openAPI3RouterFactoryAsyncResult.result();
 
-
-                //routerFactory.setOptions(new RouterFactoryOptions().setMountValidationFailureHandler(true));
-
                 routerFactory.addGlobalHandler(LoggerHandler.create());
 
                 routerFactory.mountServicesFromExtensions();
@@ -130,7 +184,7 @@ public class MainVerticle extends AbstractVerticle {
                 routerFactory.addSecurityHandler("loggedUserToken", JWTAuthHandler.create(auth));
 
                 Router router = routerFactory.getRouter();
-                router.errorHandler(400,routingContext -> {
+                router.errorHandler(400, routingContext -> {
                     Throwable failure = routingContext.failure();
                     if (failure instanceof ValidationException)
                         routingContext
@@ -140,11 +194,23 @@ public class MainVerticle extends AbstractVerticle {
                                 .end();
                 });
                 router.route("/*").handler(StaticHandler.create());
-                server = vertx.createHttpServer(new HttpServerOptions().setPort(config()
-                        .getInteger("http.port", 8080)).setHost(config()
-                        .getString("host.name", "localhost")));
-                server.requestHandler(router).listen();
-                promise.complete();
+                try {
+                    server = vertx.createHttpServer()
+                            .requestHandler(router)
+                            .listen(config().getInteger("http.port", 8080),config()
+                                    .getString("host.name", "localhost"), asyncServerStart -> {
+                                if (asyncServerStart.succeeded()) {
+                                    LOG.info("NILOG::HTTP server running on port "
+                                            +config().getInteger("http.port", 8080));
+                                    promise.complete();
+                                } else {
+                                    LOG.error("NILOG::", asyncServerStart.cause());
+                                    promise.fail(asyncServerStart.cause());
+                                }
+                            });
+                }catch (Exception ex){
+                    promise.fail(ex);
+                }
             } else {
                 promise.fail(openAPI3RouterFactoryAsyncResult.cause());
             }
@@ -152,39 +218,70 @@ public class MainVerticle extends AbstractVerticle {
         return promise.future();
     }
 
-    private void setUpDDL(JDBCClient jdbcClient, Handler<Void> done) {
-        LOG.error("NILOG::setUpDDL");
-
+    private Future<Void> injectDataSql(JDBCClient jdbcClient) {
+        LOG.error("NILOG::injectDataSql");
+        Promise<Void> promise = Promise.promise();
         jdbcClient.getConnection(connection -> {
             if (connection.failed()) {
                 LOG.error("NILOG::Could not connect to the database, exiting!!");
-                this.getVertx().close();
-                throw new RuntimeException(connection.cause());
+                promise.fail(connection.cause());
+            }
+            FileSystem vertxFileSystem = vertx.fileSystem();
+            vertxFileSystem.readFile("ddl/data.sql", readFile -> {
+                if (readFile.failed()) {
+                    LOG.error("NILOG::Could not fine data SQL file, exiting!!");
+                    promise.fail(readFile.cause());
+                }
+                String dataFromSQL = readFile.result().toString(Charset.forName("utf-8"));
+                LOG.info("DATA SQL::\n" + dataFromSQL);
+                String finalSchema = dataFromSQL.replace("\n", " ");
+                final SQLConnection conn = connection.result();
+                conn.execute(
+                        finalSchema,
+                        dataInjection -> {
+                            if (dataInjection.failed()) {
+                                LOG.error("NILOG::Could not able to setup data SQL, exiting!!");
+                                promise.fail(dataInjection.cause());
+                            }
+                            promise.complete();
+                        });
+            });
+
+        });
+        return promise.future();
+    }
+
+    private Future<Void> setUpDDL(JDBCClient jdbcClient) {
+        LOG.error("NILOG::setUpDDL");
+        Promise<Void> promise = Promise.promise();
+        jdbcClient.getConnection(connection -> {
+            if (connection.failed()) {
+                LOG.error("NILOG::Could not connect to the database, exiting!!");
+                promise.fail(connection.cause());
             }
             FileSystem vertxFileSystem = vertx.fileSystem();
             vertxFileSystem.readFile("ddl/schema.sql", readFile -> {
                 if (readFile.failed()) {
                     LOG.error("NILOG::Could not fine schema file, exiting!!");
-                    this.getVertx().close();
-                    throw new RuntimeException(readFile.cause());
+                    promise.fail(readFile.cause());
                 }
                 String schema = readFile.result().toString(Charset.forName("utf-8"));
                 LOG.info("SCHEMA::\n" + schema);
                 String finalSchema = schema.replace("\n", " ");
                 final SQLConnection conn = connection.result();
                 conn.execute(
-                    finalSchema,
-                    ddl -> {
-                        if (ddl.failed()) {
-                            LOG.error("NILOG::Could not able to setup schema, exiting!!");
-                            this.getVertx().close();
-                            throw new RuntimeException(ddl.cause());
-                        }
-                        done.handle(null);
-                    });
+                        finalSchema,
+                        ddl -> {
+                            if (ddl.failed()) {
+                                LOG.error("NILOG::Could not able to setup schema, exiting!!");
+                                promise.fail(ddl.cause());
+                            }
+                            promise.complete();
+                        });
             });
 
         });
+        return promise.future();
     }
 
     private void startServices(ServicePollerDao servicePollerDao, UserDao userDao, JWTAuth auth) {
@@ -192,11 +289,11 @@ public class MainVerticle extends AbstractVerticle {
 
         registeredConsumers = new ArrayList<>();
 
-        ServicePollerService servicePollerService = ServicePollerService.create(servicePollerDao, auth);
+        PollerService pollerService = PollerService.create(servicePollerDao);
         registeredConsumers.add(
                 serviceBinder
                         .setAddress("poller.service_manager")
-                        .register(ServicePollerService.class, servicePollerService)
+                        .register(PollerService.class, pollerService)
         );
 
         UserService userService = UserService.create(userDao, auth);
@@ -204,6 +301,13 @@ public class MainVerticle extends AbstractVerticle {
                 serviceBinder
                         .setAddress("user.service_manager")
                         .register(UserService.class, userService)
+        );
+
+        PollerTask pollerTask = new PollerTaskImpl(vertx,servicePollerDao);
+        registeredConsumers.add(
+                serviceBinder
+                        .setAddress("polling.service_manager")
+                        .register(PollerTask.class, pollerTask)
         );
     }
 

@@ -7,11 +7,12 @@ import se.kry.codetest.persistence.impl.UserDaoImpl;
 
 public interface UserDao {
 
-  Future<Boolean> addUser(AuthCredentials user);
-  Future<Boolean> userInfoMatched(AuthCredentials user);
+    static UserDao create(JDBCClient jdbcClient) {
+        return new UserDaoImpl(jdbcClient);
+    }
 
-  static UserDao create(JDBCClient jdbcClient) {
-    return new UserDaoImpl(jdbcClient);
-  }
+    Future<Boolean> addUser(AuthCredentials user);
+
+    Future<Boolean> userInfoMatched(AuthCredentials user);
 
 }

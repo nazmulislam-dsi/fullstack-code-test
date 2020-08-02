@@ -26,7 +26,7 @@ public class HashUtils {
     }
 
     public static String createHash(String... args) {
-        byte[] encodedhash = shaDigest.digest(String.join("",args).getBytes(StandardCharsets.UTF_8));
+        byte[] encodedhash = shaDigest.digest(String.join("", args).getBytes(StandardCharsets.UTF_8));
         return bytesToHex(encodedhash);
     }
 
