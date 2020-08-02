@@ -1,13 +1,10 @@
 package se.kry.codetest.persistence.impl;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
-import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLConnection;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -16,19 +13,19 @@ import se.kry.codetest.dto.ServicePostDTO;
 import se.kry.codetest.dto.ServicePutDTO;
 import se.kry.codetest.exception.BadRequestException;
 import se.kry.codetest.model.Service;
-import se.kry.codetest.persistence.ServicePollerDao;
+import se.kry.codetest.persistence.PollerDao;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ServicePollerDaoImpl implements ServicePollerDao {
-    private static final Logger LOG = LoggerFactory.getLogger(ServicePollerDaoImpl.class);
+public class PollerDaoImpl implements PollerDao {
+    private static final Logger LOG = LoggerFactory.getLogger(PollerDaoImpl.class);
 
     JDBCClient jdbcClient;
 
-    public ServicePollerDaoImpl(JDBCClient jdbcClient) {
+    public PollerDaoImpl(JDBCClient jdbcClient) {
         this.jdbcClient = jdbcClient;
     }
 
@@ -125,13 +122,19 @@ public class ServicePollerDaoImpl implements ServicePollerDao {
                 connection.queryWithParams(sqlGetServiceWithFilter.toString(),
                         params,
                         serviceGetResult -> {
-                            if (serviceGetResult.failed()) {
-                                LOG.error("NILOG::", serviceGetResult.cause());
-                                promise.fail(serviceGetResult.cause());
-                            } else {
-                                List<Service> serviceList = serviceGetResult.map(rs ->
-                                        rs.getRows().stream().map(Service::new).collect(Collectors.toList())).result();
-                                promise.complete(serviceList);
+                            try {
+                                if (serviceGetResult.failed()) {
+                                    LOG.error("NILOG::", serviceGetResult.cause());
+                                    promise.fail(serviceGetResult.cause());
+                                } else {
+                                    List<Service> serviceList = serviceGetResult.map(rs ->
+                                            rs.getRows().stream().map(Service::new).collect(Collectors.toList())).result();
+                                    promise.complete(serviceList);
+                                }
+                            }catch (Exception ex){
+                                promise.fail(ex);
+                            }finally {
+                                connection.close();
                             }
                         }
                 );

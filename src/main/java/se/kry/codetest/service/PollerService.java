@@ -7,13 +7,13 @@ import io.vertx.ext.web.api.OperationResponse;
 import io.vertx.ext.web.api.generator.WebApiServiceGen;
 import se.kry.codetest.dto.ServicePostDTO;
 import se.kry.codetest.dto.ServicePutDTO;
-import se.kry.codetest.persistence.ServicePollerDao;
+import se.kry.codetest.persistence.PollerDao;
 import se.kry.codetest.service.impl.PollerServiceImpl;
 
 @WebApiServiceGen
 public interface PollerService {
-    static PollerService create(ServicePollerDao servicePollerDao) {
-        return new PollerServiceImpl(servicePollerDao);
+    static PollerService create(PollerDao pollerDao) {
+        return new PollerServiceImpl(pollerDao);
     }
 
     void getServiceList(Integer serviceId, String serviceName,

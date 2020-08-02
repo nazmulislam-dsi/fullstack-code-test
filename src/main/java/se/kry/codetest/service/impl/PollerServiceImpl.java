@@ -16,7 +16,7 @@ import se.kry.codetest.dto.ServicePostDTO;
 import se.kry.codetest.dto.ServicePutDTO;
 import se.kry.codetest.exception.BadRequestException;
 import se.kry.codetest.model.Service;
-import se.kry.codetest.persistence.ServicePollerDao;
+import se.kry.codetest.persistence.PollerDao;
 import se.kry.codetest.service.PollerService;
 
 import java.util.stream.Collectors;
@@ -24,17 +24,17 @@ import java.util.stream.Collectors;
 public class PollerServiceImpl implements PollerService {
     private static final Logger LOG = LoggerFactory.getLogger(PollerService.class);
 
-    ServicePollerDao servicePollerDao;
+    PollerDao pollerDao;
 
-    public PollerServiceImpl(ServicePollerDao servicePollerDao) {
-        this.servicePollerDao = servicePollerDao;
+    public PollerServiceImpl(PollerDao pollerDao) {
+        this.pollerDao = pollerDao;
     }
 
     @Override
     public void getServiceList(Integer serviceId, String serviceName,
                                OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler) {
         LOG.info("NILOG::getServiceList has called.");
-        servicePollerDao.getServiceList(context.getUser().getString("userId"), serviceId, serviceName)
+        pollerDao.getServiceList(context.getUser().getString("userId"), serviceId, serviceName)
                 .onComplete(event -> {
                     if (event.succeeded()) {
                         if (event.result().size() > 0) {
@@ -69,7 +69,7 @@ public class PollerServiceImpl implements PollerService {
 
     @Override
     public void deleteAllService(OperationRequest context, Handler<AsyncResult<OperationResponse>> resultHandler) {
-        servicePollerDao.deleteAllService(context.getUser().getString("userId")).onComplete(ar -> {
+        pollerDao.deleteAllService(context.getUser().getString("userId")).onComplete(ar -> {
             if (ar.succeeded()) {
                 resultHandler.handle(Future.succeededFuture(
                         new OperationResponse()
@@ -104,7 +104,7 @@ public class PollerServiceImpl implements PollerService {
         LOG.info("NILOG::servicePostDTO" + body.toString());
         UrlValidator urlValidator = new UrlValidator();
         if (urlValidator.isValid(body.getUrl())) {
-            servicePollerDao.addService(context.getUser().getString("userId"), body).onComplete(ar -> {
+            pollerDao.addService(context.getUser().getString("userId"), body).onComplete(ar -> {
                 if (ar.succeeded()) {
                     if (ar.result() == null) {
                         LOG.warn("ServicePoller with is name exist. ServicePoller name: " + body.getName());
@@ -169,7 +169,7 @@ public class PollerServiceImpl implements PollerService {
         LOG.info("NILOG::updateService has called.");
         LOG.info("NILOG::servicePutDTO" + body.toString());
         LOG.info("NILOG::userId::" + context.getUser().getString("userId"));
-        servicePollerDao.updateServiceName(context.getUser().getString("userId"), serviceId, body).onComplete(ar -> {
+        pollerDao.updateServiceName(context.getUser().getString("userId"), serviceId, body).onComplete(ar -> {
             if (ar.succeeded()) {
                 if (ar.result() == null) {
                     LOG.warn("ServicePoller with is name exist. ServicePoller name: " + body.getName());

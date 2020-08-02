@@ -17,7 +17,7 @@ import se.kry.codetest.dto.ServicePostDTO;
 import se.kry.codetest.dto.ServicePutDTO;
 import se.kry.codetest.model.AuthCredentials;
 import se.kry.codetest.model.Service;
-import se.kry.codetest.persistence.ServicePollerDao;
+import se.kry.codetest.persistence.PollerDao;
 import se.kry.codetest.persistence.UserDao;
 
 import java.util.List;
@@ -34,7 +34,7 @@ import static se.kry.codetest.utils.TestUtils.wipeDatabase;
 public class PollerServiceTest extends BaseServicesTest {
     private static final Logger LOG = LoggerFactory.getLogger(PollerServiceTest.class);
 
-    private ServicePollerDao servicePollerDao;
+    private PollerDao pollerDao;
     private PollerService pollerService;
     private OperationRequest loggedContext;
 
@@ -53,8 +53,8 @@ public class PollerServiceTest extends BaseServicesTest {
                                     auth = jwtAuth.result();
                                     userDao = UserDao.create(jdbcClient);
                                     userService = UserService.create(userDao, auth);
-                                    servicePollerDao = ServicePollerDao.create(jdbcClient);
-                                    pollerService = PollerService.create(servicePollerDao);
+                                    pollerDao = PollerDao.create(jdbcClient);
+                                    pollerService = PollerService.create(pollerDao);
                                     testContext.completeNow();
                                 } else testContext.failNow(jwtAuth.cause());
                             });

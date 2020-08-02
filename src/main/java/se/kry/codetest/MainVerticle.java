@@ -5,7 +5,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
@@ -23,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.kry.codetest.event.PollerTask;
 import se.kry.codetest.event.impl.PollerTaskImpl;
-import se.kry.codetest.persistence.ServicePollerDao;
+import se.kry.codetest.persistence.PollerDao;
 import se.kry.codetest.persistence.UserDao;
 import se.kry.codetest.service.PollerService;
 import se.kry.codetest.service.UserService;
@@ -69,7 +68,7 @@ public class MainVerticle extends AbstractVerticle {
                 String username = config().getString("datasource.driver.username", "sa");
                 String password = config().getString("datasource.driver.password", "");
                 Boolean setupDbSchema = config().getBoolean("datasource.schema.setup", true);
-                int delay = config().getInteger("poller.status.check.scheduler.time.in.ms",30000);
+                int delay = config().getInteger("poller.status.check.scheduler.time.in.ms",5000);
                 int workerPoolSize = config().getInteger("worker.pool.size",10);
                 Boolean populatedDataSQL = config().getBoolean("populate.data.sql",true);
 
@@ -104,11 +103,11 @@ public class MainVerticle extends AbstractVerticle {
         JsonObject jwkObject = jwk.result().toJsonObject();
         PubSecKeyOptions pubSecKeyOptions = new PubSecKeyOptions(jwkObject);
         JWTAuth auth = JWTAuth.create(vertx, new JWTAuthOptions().addPubSecKey(pubSecKeyOptions));
-        ServicePollerDao servicePollerDao = ServicePollerDao.create(jdbcClient);
+        PollerDao pollerDao = PollerDao.create(jdbcClient);
         UserDao userDao = UserDao.create(jdbcClient);
-        startServices(servicePollerDao, userDao, auth);
+        startServices(pollerDao, userDao, auth);
 
-        servicePollerDao.deleteAllService().onComplete(event -> {
+        pollerDao.deleteAllService().onComplete(event -> {
             LOG.info("NILOG::All existing services has deleted.");
         });
 
@@ -116,7 +115,7 @@ public class MainVerticle extends AbstractVerticle {
                 .setWorker(true)
                 .setWorkerPoolSize(workerPoolSize);
 
-        vertx.deployVerticle(new PollerWorker(vertx), workerOpts, r -> {
+        vertx.deployVerticle(new PollerWorker(vertx,pollerDao), workerOpts, r -> {
             if(r.succeeded()){
                 System.out.println("Successfully deployed worker verticle.");
             } else {
@@ -127,12 +126,13 @@ public class MainVerticle extends AbstractVerticle {
         PollerTask pollerTask = PollerTask.createProxy(vertx, "polling.service_manager");
 
         timerID = vertx.setPeriodic(delay, aLong -> {
+            LOG.info("NILOG::Calling task to update status.");
             pollerTask.updateStatusOfServiceByPolling(event -> {
                 if(event.failed()){
                     LOG.error("NILOG::",event.cause());
                     promise.fail(event.cause());
                 }else{
-                    LOG.info("Service status updated.");
+                    LOG.info("Task to update status has called.");
                 }
             });
         });
@@ -284,12 +284,12 @@ public class MainVerticle extends AbstractVerticle {
         return promise.future();
     }
 
-    private void startServices(ServicePollerDao servicePollerDao, UserDao userDao, JWTAuth auth) {
+    private void startServices(PollerDao pollerDao, UserDao userDao, JWTAuth auth) {
         serviceBinder = new ServiceBinder(vertx);
 
         registeredConsumers = new ArrayList<>();
 
-        PollerService pollerService = PollerService.create(servicePollerDao);
+        PollerService pollerService = PollerService.create(pollerDao);
         registeredConsumers.add(
                 serviceBinder
                         .setAddress("poller.service_manager")
@@ -303,7 +303,7 @@ public class MainVerticle extends AbstractVerticle {
                         .register(UserService.class, userService)
         );
 
-        PollerTask pollerTask = new PollerTaskImpl(vertx,servicePollerDao);
+        PollerTask pollerTask = new PollerTaskImpl(vertx, pollerDao);
         registeredConsumers.add(
                 serviceBinder
                         .setAddress("polling.service_manager")

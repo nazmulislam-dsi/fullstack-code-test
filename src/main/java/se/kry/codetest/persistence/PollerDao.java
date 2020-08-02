@@ -5,14 +5,14 @@ import io.vertx.ext.jdbc.JDBCClient;
 import se.kry.codetest.dto.ServicePostDTO;
 import se.kry.codetest.dto.ServicePutDTO;
 import se.kry.codetest.model.Service;
-import se.kry.codetest.persistence.impl.ServicePollerDaoImpl;
+import se.kry.codetest.persistence.impl.PollerDaoImpl;
 
 import java.util.List;
 
-public interface ServicePollerDao {
+public interface PollerDao {
 
-    static ServicePollerDao create(JDBCClient jdbcClient) {
-        return new ServicePollerDaoImpl(jdbcClient);
+    static PollerDao create(JDBCClient jdbcClient) {
+        return new PollerDaoImpl(jdbcClient);
     }
 
     Future<Service> addService(String userId, ServicePostDTO servicePostDTO);
