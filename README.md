@@ -72,7 +72,7 @@ As mentioned earlier additional profile based configuration can be provided with
 
 Example:
 ~~~
-gradlew clean run -Pdev
+./gradlew clean run -Pdev
 ~~~
 **Build the application with Gradle**
 
@@ -100,7 +100,7 @@ docker build -t fullstack-code-test-with-vertx .
 
 **[Multi-stage](https://docs.docker.com/develop/develop-images/multistage-build/) Docker build: (Everything using docker)**
 
-It's a great way to ensure builds are 100% reproducible AND as lean as possible. On the downside a Maven build in Docker may have to download many dependencies each time it runs. But RUN’ing the `dependency:go-offline` goal, this will download most* of the dependencies required for the build and cache them for as long as the `pom.xml` **doesn’t change**.
+It's a great way to ensure builds are 100% reproducible AND as lean as possible. On the downside a Gradle build in Docker may have to download many dependencies each time it runs. 
 
 At file DockerfileBuildWIthMavenImage is has been illustrated how to build the package from this project source code with maven docker image and then build the docker image. 
 Its pretty helpful if no JDK is installed in the system. Only dependency is docker. Following is the command -
