@@ -90,7 +90,7 @@ task logConfRename(type: Copy) {
 }
 
 task swaggerFileReplace(type: Copy) {
-    into "$projectDir/webroot/swagger-ui"
+    into "$buildDir/resources/main/webroot/swagger-ui"
     from 'src/main/resources'
     include '**/api_desc.yaml'
 }
