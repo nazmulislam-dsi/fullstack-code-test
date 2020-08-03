@@ -14,7 +14,7 @@
 
 More details about the APIs can be found by visiting the URL from the browser after running the application -
 
-<PROTOCOL>://<HOSTHANME>:<PORT>/swagger-ui
+${PROTOCOL}://${HOSTHANME}:${PORT}/swagger-ui
 
 Example : [http://localhost:8080/swagger-ui](http://localhost:8080/swagger-ui)
 
@@ -33,7 +33,8 @@ Example : [http://localhost:8080/swagger-ui](http://localhost:8080/swagger-ui)
 
 Configuration files can be found under conf folder
 
-By default, test_config.json will be picked
+By default, test_config.json will be picked from that folder. Example config has provided bellow.
+
 ~~~
 {
   "http.port": 8080,
@@ -57,7 +58,7 @@ You should have following tools installed in your system to run the application
 
 - jdk-1.8.0
 
-- maven 3.6.3 (Optional. Requires, if you don't use mvnw/docker)
+- gradle 6.1 (Optional. Requires, if you don't use gradlew/docker)
 
 - docker (Optional. Requires, if run with docker)
 
