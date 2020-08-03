@@ -32,7 +32,7 @@ public class PollerWorker extends AbstractVerticle {
             JsonObject data = new JsonObject(m.body());
             String url = data.getString("url");
             try{
-                client.getAbs(url)
+                client.getAbs(url).timeout(10000)
                         .send(response -> {
                             String status = "FAIL";
                             if (response.succeeded()) {

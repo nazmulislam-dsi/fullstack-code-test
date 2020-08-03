@@ -6,6 +6,7 @@ import io.vertx.ext.web.api.OperationRequest;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.reactivex.ext.unit.Async;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -404,6 +405,39 @@ public class PollerServiceTest extends BaseServicesTest {
                                     loggedContext,
                                     test.succeeding(getRes -> {
                                         assertEmptyResponse(resAgain);
+                                        thirdStatusCheck.flag();
+                                    }));
+                        });
+                    }));
+
+        }));
+        test.awaitCompletion(1000, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void deleteServiceWithAnotherUserTest(VertxTestContext test) throws InterruptedException {
+        Checkpoint statusCheck = test.checkpoint();
+        Checkpoint secondStatusCheck = test.checkpoint();
+        Checkpoint thirdStatusCheck = test.checkpoint();
+        ServicePostDTO servicePostDTO = new ServicePostDTO("Google", "https://google.com");
+        pollerService.createService(servicePostDTO, loggedContext, test.succeeding(res -> {
+            test.verify(() -> {
+                assertSuccessCreateResponse("application/json", res);
+                statusCheck.flag();
+            });
+            Service service = new Service(res.getPayload().toJsonObject());
+            Long idToFetchLater = service.getId();
+            loggedContext = new OperationRequest().setUser(new JsonObject().put("userId", "anotherTester"));
+            pollerService.deleteAllService(loggedContext,
+                    test.succeeding(resAgain -> {
+                        test.verify(() -> {
+                            assertEmptyResponse(resAgain);
+                            secondStatusCheck.flag();
+                            loggedContext = new OperationRequest().setUser(new JsonObject().put("userId", "tester"));
+                            pollerService.getServiceList(new Long(idToFetchLater).intValue(), null,
+                                    loggedContext,
+                                    test.succeeding(getRes -> {
+                                        assertSuccessCreateResponse("application/json", res);
                                         thirdStatusCheck.flag();
                                     }));
                         });

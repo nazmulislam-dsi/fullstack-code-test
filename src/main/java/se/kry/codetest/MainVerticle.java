@@ -67,10 +67,10 @@ public class MainVerticle extends AbstractVerticle {
                 String driverClassName = config().getString("datasource.driver.class.name", "org.h2.Driver");
                 String username = config().getString("datasource.driver.username", "sa");
                 String password = config().getString("datasource.driver.password", "");
-                Boolean setupDbSchema = config().getBoolean("datasource.schema.setup", true);
-                int delay = config().getInteger("poller.status.check.scheduler.time.in.ms",5000);
+                Boolean setupDbSchema = config().getBoolean("datasource.schema.setup", false);
+                int delay = config().getInteger("poller.status.check.scheduler.time.in.ms",30000);
                 int workerPoolSize = config().getInteger("worker.pool.size",10);
-                Boolean populatedDataSQL = config().getBoolean("populate.data.sql",true);
+                Boolean populatedDataSQL = config().getBoolean("populate.data.sql",false);
 
                 jdbcClient = JDBCClient.createShared(vertx,
                         new JsonObject().put("url", dbUrl)
@@ -96,6 +96,7 @@ public class MainVerticle extends AbstractVerticle {
         if(timerID != 0l) vertx.cancelTimer(timerID);
         if (server != null) server.close();
         registeredConsumers.forEach(c -> serviceBinder.unregister(c));
+        super.stop();
     }
 
     private void environmentConfig(AsyncResult<Buffer> jwk, int workerPoolSize, int delay,
@@ -184,21 +185,13 @@ public class MainVerticle extends AbstractVerticle {
                 routerFactory.addSecurityHandler("loggedUserToken", JWTAuthHandler.create(auth));
 
                 Router router = routerFactory.getRouter();
-                router.errorHandler(400, routingContext -> {
-                    Throwable failure = routingContext.failure();
-                    if (failure instanceof ValidationException)
-                        routingContext
-                                .response()
-                                .setStatusCode(400)
-                                .putHeader("content-type", "application/text")
-                                .end();
-                });
+
                 router.route("/*").handler(StaticHandler.create());
                 try {
                     server = vertx.createHttpServer()
                             .requestHandler(router)
                             .listen(config().getInteger("http.port", 8080),config()
-                                    .getString("host.name", "localhost"), asyncServerStart -> {
+                                    .getString("host.name", "0.0.0.0"), asyncServerStart -> {
                                 if (asyncServerStart.succeeded()) {
                                     LOG.info("NILOG::HTTP server running on port "
                                             +config().getInteger("http.port", 8080));

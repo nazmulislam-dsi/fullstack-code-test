@@ -1,0 +1,6 @@
+version: '3.7'
+services:
+  web:
+    image: nazmulnaim/fullstack-code-test-with-vertx
+    ports:
+      - "8080:8080"

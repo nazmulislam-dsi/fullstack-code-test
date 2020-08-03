@@ -1,44 +1,132 @@
-# KRY code assignment
+## Guide
 
-One of our developers built a simple service poller.
-The service consists of a backend service written in Vert.x (https://vertx.io/) that keeps a list of services (defined by a URL), and periodically does a HTTP GET to each and saves the response ("OK" or "FAIL").
+- This REST API based project has been built with vertx 3.9.0. Java Runtime Environment 8 is required to run the application as well as to build the application JDK8 is the minimum requirement.
 
-Unfortunately, the original developer din't finish the job, and it's now up to you to complete the thing.
-Some of the issues are critical, and absolutely need to be fixed for this assignment to be considered complete.
-There is also a wishlist of features in two separate tracks - if you have time left, please choose *one* of the tracks and complete as many of those issues as you can.
+- The purpose of the project is fairly simple, 
 
-Critical issues (required to complete the assignment):
+>> There are 2 API to registration and login to obtain JWT token.
+>> 4 API to create, update delete and get the services
+>> Once a service get created only the name of the service can be updated
+>> One can not remove services individually but can remove all the services at once
+>> After creating the service with a name and a URL, Application will try to polling the state of the service URL and save the status as "OK" or "FAIL"
 
-- Whenever the server is restarted, any added services disappear
-- There's no way to delete individual services
-- We want to be able to name services and remember when they were added
-- The HTTP poller is not implemented
+- API definition can be found with Swagger-UI written in OpenAPI 3.0 specification.
 
-Frontend/Web track:
-- We want full create/update/delete functionality for services
-- The results from the poller are not automatically shown to the user (you have to reload the page to see results)
-- We want to have informative and nice looking animations on add/remove services
+More details about the APIs can be found by visiting the URL from the browser after running the application -
 
-Backend track
-- Simultaneous writes sometimes causes strange behavior
-- Protect the poller from misbehaving services (for example answering really slowly)
-- Service URL's are not validated in any way ("sdgf" is probably not a valid service)
-- A user (with a different cookie/local storage) should not see the services added by another user
+<PROTOCOL>://<HOSTHANME>:<PORT>/swagger-ui
 
-Spend maximum four hours working on this assignment - make sure to finish the issues you start.
+Example : [http://localhost:8080/swagger-ui](http://localhost:8080/swagger-ui)
 
-Put the code in a git repo on GitHub and send us the link (niklas.holmqvist@kry.se) when you are done.
+![API](image/API.jpg)
 
-Good luck!
+- High level topology has presented bellow.
 
-# Building
-We recommend using IntelliJ as it's what we use day to day at the KRY office.
-In intelliJ, choose
-```
-New -> New from existing sources -> Import project from external model -> Gradle -> select "use gradle wrapper configuration"
-```
+![API](image/vertx.jpg)
 
-You can also run gradle directly from the command line:
-```
+- TTD approach is being following during the development, Including unit testing and integration testing 3 different types style is available at test folder.
+>> 1. Unit testing with Junit5 jupiter
+>> 2. Unit testing with vertx unit testing framework
+>> 3. Persistence layer testing with vertx and jdbc driver 
+
+## Properties
+
+Configuration files can be found under conf folder
+
+By default, test_config.json will be picked
+~~~
+{
+  "http.port": 8080,
+  "host.name": "0.0.0.0",
+  "datasource.url": "jdbc:h2:mem:h2test;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;",
+  "datasource.driver.class.name": "org.h2.Driver",
+  "datasource.driver.username": "sa",
+  "datasource.driver.password": "",
+  "jwk.path": "jwk.json",
+  "datasource.schema.setup": true,
+  "populate.data.sql": true,
+  "poller.status.check.scheduler.time.in.ms": 30000
+}
+~~~
+
+Other property file can be chosen during gradle run or build by providing profile named followed by -P flag, available profiles are dev, prod, test.
+
+## Prerequisite
+
+You should have following tools installed in your system to run the application
+
+- jdk-1.8.0
+
+- maven 3.6.3 (Optional. Requires, if you don't use mvnw/docker)
+
+- docker (Optional. Requires, if run with docker)
+
+- docker-compose (Optional. Requires, if run with docker-compose)
+
+**Build the application with Gradle**
+~~~
 ./gradlew clean run
+~~~
+As mentioned earlier additional profile based configuration can be provided with -P parameter.
+
+Example:
+~~~
+gradlew clean run -Pdev
+~~~
+**Build the application with Gradle**
+
+It's a gradle based application, To build the application following command need to be run from command line.
+~~~
+./gradlew clean build
+~~~
+or
+~~~
+./gradlew clean build
+~~~
+
+Additional profile based configuration can be provided with -P parameter.
+
+**Build the Docker image**
+
+- S1.
+
+To build a docker image with the package, that has been generated at the previous step following command is necessary from command line. Keep in find for this section you will need to build the package at first.
+~~~
+docker build -t fullstack-code-test-with-vertx .
+~~~
+
+- S2.
+
+**[Multi-stage](https://docs.docker.com/develop/develop-images/multistage-build/) Docker build: (Everything using docker)**
+
+It's a great way to ensure builds are 100% reproducible AND as lean as possible. On the downside a Maven build in Docker may have to download many dependencies each time it runs. But RUN’ing the `dependency:go-offline` goal, this will download most* of the dependencies required for the build and cache them for as long as the `pom.xml` **doesn’t change**.
+
+At file DockerfileBuildWIthMavenImage is has been illustrated how to build the package from this project source code with maven docker image and then build the docker image. 
+Its pretty helpful if no JDK is installed in the system. Only dependency is docker. Following is the command -
+
+~~~
+docker build -t fullstack-code-test-with-vertx -f DockerfileBuildWIthGradleImage .
+~~~
+
+**Run the Docker image**
+
+To run the newly created image command is give.  
+~~~
+docker run -p 8080:8080 fullstack-code-test-with-vertx
+~~~
+NB: Need to make sure, the port 8080 is free.
+
+Prebuild image is also available at the following URL
+
+[DockerHub/nazmulnaim/fullstack-code-test-with-vertx](https://hub.docker.com/repository/docker/nazmulnaim/fullstack-code-test-with-vertx)
+
+To run the prebuild image -
+~~~
+docker run -p 8080:8080 nazmulnaim/fullstack-code-test-with-vertx:latest
+~~~
+
+or, using docker-compose
 ```
+docker-compose up -d
+```
+There is also another docker compose file for development purpose.

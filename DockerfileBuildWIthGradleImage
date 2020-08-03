@@ -1,0 +1,10 @@
+FROM gradle:6.5.1-jdk8 AS build-with-gradle
+COPY --chown=gradle:gradle . /home/gradle/src
+WORKDIR /home/gradle/src
+RUN ./gradlew build --no-daemon
+
+FROM openjdk:8-jre-alpine AS copy-package
+EXPOSE 8080
+COPY --from=build-with-gradle /home/gradle/src/build/libs/codetest-1.0.0-SNAPSHOT-fat.jar /usr/app/
+COPY --from=build-with-gradle /home/gradle/src/build/resources/main/conf/config.json /usr/app/conf/
+ENTRYPOINT ["java","-jar","/usr/app/codetest-1.0.0-SNAPSHOT-fat.jar", "-conf", "/usr/app/conf/config.json"]

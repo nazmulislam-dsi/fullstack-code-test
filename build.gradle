@@ -44,10 +44,12 @@ shadowJar {
 
 task chooseProfile(dependsOn: processResources/**/) {
 
-    if (project.hasProperty('local')) {
-        profile = 'local'
+    if (project.hasProperty('prod')) {
+        profile = 'prod'
     } else if (project.hasProperty('dev')) {
         profile = 'dev'
+    } else if (project.hasProperty('test')) {
+        profile = 'test'
     }
     confPath = "$buildDir/resources/main/conf/config.json"
 
@@ -188,7 +190,8 @@ run {
             "--redeploy=$project.ext.watchForChange",
             "--launcher-class=$mainClassName",
             "--on-redeploy=$project.ext.doOnChange",
-            profile.equals('local') ? "--java-opts" : "", profile.equals('local') ?
+            profile.equals('dev')||profile.equals('test') ? "--java-opts" : "",
+            profile.equals('dev')||profile.equals('test') ?
                     "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000" : ""
     ]
 }

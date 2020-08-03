@@ -5,6 +5,7 @@
   "datasource.driver.username": "sa",
   "datasource.driver.password": "",
   "jwk.path": "jwk.json",
+  "datasource.schema.setup": true,
   "populate.data.sql": true,
   "poller.status.check.scheduler.time.in.ms": 300000
 }
